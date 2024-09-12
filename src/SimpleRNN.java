@@ -36,7 +36,7 @@ import java.util.Random;
 
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
-    private static final int SEQ_LENGTH = 3; // 序列長度
+    private static final int SEQ_LENGTH = 4; // 序列長度
     private static final double LEARNING_RATE = 0.1; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
@@ -90,13 +90,48 @@ public class SimpleRNN {
         return matrix;
     }
 
+    private int[] sample(int seedIdx, double[] hPrev) {
+        int[] result = new int[SEQ_LENGTH];
+        result[0] = seedIdx;
+        for (int seq = 1; seq < SEQ_LENGTH; seq++) {
+            result[seq] = getIdxFrom(seedIdx, hPrev);
+        }
+        return  result;
+    }
+
+    private int getIdxFrom(int seedIdx, double[] hPrev) {
+        int result = -1;
+        double[] output = forward(hPrev, seedIdx);
+        result = sampleFromProbabilities(output);
+        return result;
+    }
+
+    private int sampleFromProbabilities(double[] probabilities) {
+        double randomValue = Math.random();
+        double cumulativeProbality = 0.0;
+        for (int i = 0; i < probabilities.length; i++) {
+            cumulativeProbality += probabilities[i];
+            if (randomValue <= cumulativeProbality)
+                return i;
+        }
+        return probabilities.length - 1; // 如果沒有選中字元位置，就選擇最後一個字元
+    }
+
+    private double[] forward(double[] hPrev, int seedIdx) {
+        double[] result = new double[SEQ_LENGTH];
+        result[0] = 0.1; // 第一個字元的機率
+        result[1] = 0.5; // 第二個字元的機率
+        result[2] = 0.4; // 第三個字元的機率
+        return result;
+    }
+
     private void train(String data, int iterations) {
         int n = 0;
         int p = 0;
         double smoothLoss = -Math.log(1.0 / vocabSize) * SEQ_LENGTH;
         double[] hPrev = new double[HIDDEN_SIZE];
 
-        while(n <= iterations) {
+        while(n < iterations) {
             hPrev = new double[HIDDEN_SIZE]; // 重置 RNN 記憶體
             p = 0;
 
@@ -104,18 +139,28 @@ public class SimpleRNN {
             int[] targets = new int[SEQ_LENGTH];
             for (int i = 0; i < SEQ_LENGTH - 1; i++) {
                 inputs[i] = charToIdx.get(data.charAt(p + i));
-                System.out.println("input char:" + data.charAt(p + i + 1));
+                System.out.println("input char:" + data.charAt(p + i ));
                 targets[i] = charToIdx.get(data.charAt(p + i + 1));
                 System.out.println("output char:" + data.charAt(p + i + 1));
                 System.out.println(String.format("inputs[%d]:%s", i,  inputs[i]));
                 System.out.println(String.format("targets[%d]:%s", i,  targets[i]));
             }
 
-            double loss = 0;
-            // 前向傳播
-            for (;;) {
-                break;
+            int[] sampleIdxes = sample(0, hPrev); // 執行 sample 方法來生成字元串列
+
+            // 將生成的索引轉換為字元並組合成字串
+            StringBuffer sb = new StringBuffer();
+            for (int idx : sampleIdxes) {
+                sb.append(idxToChar.get(idx));
             }
+
+            System.out.println("Predicated String: " + sb.toString());
+
+//            double loss = 0;
+//            // 前向傳播
+//            for (;;) {
+//                break;
+//            }
 
             n++;
         }
@@ -124,7 +169,7 @@ public class SimpleRNN {
     }
 
     public static void main(String[] args) {
-        String data = "牛肉麵";
+        String data = "瑪爾濟斯";
         SimpleRNN rnn = new SimpleRNN(data);
         rnn.train(data, 2);
     }
