@@ -38,7 +38,7 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 3; // 序列長度
-    private static final double LEARNING_RATE = 0.1; // 學習率
+    private static final double LEARNING_RATE = 0.01; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
@@ -382,7 +382,7 @@ public class SimpleRNN {
     public static void main(String[] args) {
         String data = "牛肉麵";
         SimpleRNN rnn = new SimpleRNN(data);
-        rnn.train(data, 1200);
+        rnn.train(data, 9000);
         rnn.generate(2, '牛');
     }
 
