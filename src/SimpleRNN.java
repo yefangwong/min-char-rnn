@@ -92,6 +92,7 @@ public class SimpleRNN {
     }
 
     private void train(String data, int iterations) {
+        long startTime = System.currentTimeMillis(); // 紀錄開始
         int n = 0;
         int p = 0;
         double smoothLoss = -Math.log(1.0 / vocabSize) * SEQ_LENGTH;
@@ -146,6 +147,10 @@ public class SimpleRNN {
             p += SEQ_LENGTH; // move data pointer
             n++; // iteration counter
         }
+
+        long endTime = System.currentTimeMillis(); // 紀錄結束時間 (毫秒)
+        double elapsedTime = (endTime - startTime) / 1000.0; // 轉換為秒
+        System.out.println("Training time: " + elapsedTime + " seconds");
     }
 
     private BackwardResult backward(int[] inputs, int[] targets, ForwardResult forwardResult) {
