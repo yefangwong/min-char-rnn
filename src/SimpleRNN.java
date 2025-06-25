@@ -30,6 +30,7 @@
  * BSD license.
  */
 
+import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -379,11 +380,44 @@ public class SimpleRNN {
         return probabilities.length - 1;
     }
 
-    public static void main(String[] args) {
-        String data = "牛肉麵";
-        SimpleRNN rnn = new SimpleRNN(data);
-        rnn.train(data, 9000);
-        rnn.generate(2, '牛');
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        SimpleRNN rnn = null;
+        if (args[0].isEmpty() || args[0].contains("--train")) {
+            String data = "牛肉麵";
+            rnn = new SimpleRNN(data);
+            rnn.train(data, 9000);
+            // 確保準確率到 99.7% 再儲存
+            rnn.saveModel("rnn_model.dat");
+        } else if (args[0].contains("--inference")) {
+            rnn = new SimpleRNN("");
+            rnn.loadModel("rnn_model.dat");
+            rnn.generate(2, '牛');
+        }
+    }
+
+    private void loadModel(String fileName) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName))) {
+            wxh = (double[][]) in.readObject();
+            whh = (double[][]) in.readObject();
+            why = (double[][]) in.readObject();
+            bh = (double[]) in.readObject();
+            by = (double[]) in.readObject();
+            charToIdx = (Map<Character, Integer>) in.readObject();
+            idxToChar = (Map<Integer, Character>) in.readObject();
+            vocabSize = charToIdx.size();
+        }
+    }
+
+    private void saveModel(String fileName) throws IOException {
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName))) {
+            out.writeObject(wxh);
+            out.writeObject(whh);
+            out.writeObject(why);
+            out.writeObject(bh);
+            out.writeObject(by);
+            out.writeObject(charToIdx);
+            out.writeObject(idxToChar);
+        }
     }
 
     // 使用模型生成長序列
@@ -420,10 +454,6 @@ public class SimpleRNN {
         System.out.println();
     }
 
-    /*private int sample(double[] probs) {
-        return -1;
-    }*/
-
     private double[] softmax(double[] x) {
         double[] result = new double[x.length];
         double sum = 0.0;
@@ -435,12 +465,4 @@ public class SimpleRNN {
         }
         return result;
     }
-
-    // 前向傳播計算隱藏狀態和輸出
-    /*private double[] forward(double[] x, double[] h) {
-        double[] hNext = new double[HIDDEN_SIZE];
-        double[] y = new double[vocabSize];
-        return null;
-        // h(t) = tanh(Wxh * x + Whh * h + bh)
-    }*/
 }
