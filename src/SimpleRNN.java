@@ -38,7 +38,7 @@ import java.util.Random;
 
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
-    private static final int SEQ_LENGTH = 3; // 序列長度
+    private static final int SEQ_LENGTH = 1; // 序列長度
     private static final double LEARNING_RATE = 0.01; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
@@ -52,7 +52,7 @@ public class SimpleRNN {
     private Map<Integer, Character> idxToChar;
 
     public SimpleRNN(String data) {
-        char[]  chars = data.toCharArray();
+        char[] chars = data.toCharArray();
 
         int dataSize = chars.length;
 
@@ -100,43 +100,47 @@ public class SimpleRNN {
 
         System.out.println("initial smoothLoss:" + smoothLoss);
         while(n <= iterations) {
-            System.out.println("iter:" + n + " starts --------------------------------");
-            if ((p + SEQ_LENGTH + 1 >= data.length() || n == 0)) {
+            //System.out.println("iter:" + n + " starts --------------------------------");
+            if ((p + SEQ_LENGTH >= data.length() || n == 0)) {
                 hPrev = new double[HIDDEN_SIZE]; // reset RNN memory
                 p = 0; // go from start of data
             }
 
             int[] inputs = new int[SEQ_LENGTH];
             int[] targets = new int[SEQ_LENGTH];
-            for (int i = 0; i <= SEQ_LENGTH - 1; i++) {
+            for (int i = 0; i < SEQ_LENGTH; i++) {
                 inputs[i] = charToIdx.get(data.charAt(p + i));
-                System.out.println("input char:" + data.charAt(p + i));
-                if (p + i + 1 < data.length()) {
+                //System.out.println("input char:" + data.charAt(p + i));
+                //if (p + i + 1 < data.length()) {
                     targets[i] = charToIdx.get(data.charAt(p + i + 1));
-                    System.out.println("output char:" + data.charAt(p + i + 1));
-                } else {
-                    targets[i] = charToIdx.get(data.charAt(0)); // 讓序列循環
-                    System.out.println("output char:" + data.charAt(0));
-                }
-                System.out.println(String.format("inputs[%d]:%s", i,  inputs[p + i]));
-                System.out.println(String.format("targets[%d]:%s", i,  targets[i]));
+                    //System.out.println("output char:" + data.charAt(p + i + 1));
+                //} else {
+                    //targets[i] = charToIdx.get(data.charAt(0)); // 讓序列循環
+                    //continue;
+                    //System.out.println("output char:" + data.charAt(0));
+                //}
+                //System.out.println(String.format("inputs[%d]:%s", i,  inputs[p + i]));
+                //System.out.println(String.format("targets[%d]:%s", i,  targets[i]));
             }
             double loss = 0;
 
+            //System.out.println("inputs:" + Arrays.toString(inputs));
+            //System.out.println("targets:" + Arrays.toString(targets));
             // 前向傳播 (得到預測機率)
             ForwardResult result = forward(inputs, hPrev);
 
             // 計算 loss (Cross Entropy)
             for (int t = 0; t < SEQ_LENGTH; t++) {
-                System.out.println("output layer:" + formatArray(result.y[t]) + "," +
-                        " target char:" + data.charAt(targets[t]));
+                /*System.out.println("output layer:" + formatArray(result.y[t]) + "," +
+                        " target char:" + data.charAt(targets[t]));*/
                 loss += computeLoss(result.y[t], targets[t]);
             }
 
             // 更新 smoothLoss
             smoothLoss = smoothLoss * 0.99 + loss * 0.001;
 
-            System.out.println("Iteration: " + n + ", Loss: " + loss + ", Smooth Loss: " + smoothLoss);
+            if (n % 100 == 0)
+                System.out.println("Iteration: " + n + ", Loss: " + loss + ", Smooth Loss: " + smoothLoss);
 
             // 反向傳播
             BackwardResult grad = backward(inputs, targets, result);
@@ -144,7 +148,8 @@ public class SimpleRNN {
             // 更新參數
             updateParameters(grad);
 
-            p += SEQ_LENGTH; // move data pointer
+            //p += SEQ_LENGTH; // move data pointer
+            p += 1;
             n++; // iteration counter
         }
     }
@@ -366,8 +371,6 @@ public class SimpleRNN {
         return oneHot;
     }
 
-
-
     private int sampleFromProbabilities(double[] probabilities) {
         double randomValue = Math.random();
         double cumulativeProbability = 0.0;
@@ -380,14 +383,25 @@ public class SimpleRNN {
         return probabilities.length - 1;
     }
 
+    private int argmax(double[] array) {
+        int maxIndex = 0;
+        double max = array[0];
+        for (int i = 1; i < array.length; i++) {
+            if (array[i] > max)
+                maxIndex = i;
+        }
+        return maxIndex;
+    }
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         SimpleRNN rnn = null;
         if (args[0].isEmpty() || args[0].contains("--train")) {
-            String data = "牛肉麵";
+            String data = "牛肉麵#牛肉麵#牛肉麵#";
             rnn = new SimpleRNN(data);
-            rnn.train(data, 9000);
-            // 確保準確率到 99.7% 再儲存
-            rnn.saveModel("rnn_model.dat");
+            rnn.train(data, 10000);
+            rnn.generate(2, '牛');
+            // TODO:確保準確率到 99.7% 再儲存
+            //rnn.saveModel("rnn_model.dat");
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
             rnn.loadModel("rnn_model.dat");
@@ -437,12 +451,15 @@ public class SimpleRNN {
                 return;
             }
             double[] probs = softmax(result.z[0]);
-            int nextCharIdx = sampleFromProbabilities(probs);
+            int nextCharIdx = argmax(probs);
             if (nextCharIdx < 0 || nextCharIdx >= vocabSize) {
                 System.out.println("Error: Invalid character index generated");
                 return;
             }
             char nextChar = idxToChar.get(nextCharIdx);
+            if (nextChar == '#') {
+                break; // 停止輸出
+            }
             System.out.print(nextChar);
 
             // 更新輸入和隱藏狀態
