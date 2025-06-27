@@ -110,29 +110,21 @@ public class SimpleRNN {
             int[] targets = new int[SEQ_LENGTH];
             for (int i = 0; i < SEQ_LENGTH; i++) {
                 inputs[i] = charToIdx.get(data.charAt(p + i));
-                //System.out.println("input char:" + data.charAt(p + i));
-                //if (p + i + 1 < data.length()) {
-                    targets[i] = charToIdx.get(data.charAt(p + i + 1));
-                    //System.out.println("output char:" + data.charAt(p + i + 1));
-                //} else {
-                    //targets[i] = charToIdx.get(data.charAt(0)); // 讓序列循環
-                    //continue;
-                    //System.out.println("output char:" + data.charAt(0));
-                //}
-                //System.out.println(String.format("inputs[%d]:%s", i,  inputs[p + i]));
-                //System.out.println(String.format("targets[%d]:%s", i,  targets[i]));
+                targets[i] = charToIdx.get(data.charAt(p + i + 1));
             }
             double loss = 0;
 
+            // for debug
             //System.out.println("inputs:" + Arrays.toString(inputs));
             //System.out.println("targets:" + Arrays.toString(targets));
+
             // 前向傳播 (得到預測機率)
             ForwardResult result = forward(inputs, hPrev);
+            // 取這一輪的最後一個時間步做為下一輪的初始 hPrev
+            hPrev = result.h[result.h.length - 1];
 
             // 計算 loss (Cross Entropy)
             for (int t = 0; t < SEQ_LENGTH; t++) {
-                /*System.out.println("output layer:" + formatArray(result.y[t]) + "," +
-                        " target char:" + data.charAt(targets[t]));*/
                 loss += computeLoss(result.y[t], targets[t]);
             }
 
@@ -148,8 +140,7 @@ public class SimpleRNN {
             // 更新參數
             updateParameters(grad);
 
-            //p += SEQ_LENGTH; // move data pointer
-            p += 1;
+            p += 1; // move data pointer
             n++; // iteration counter
         }
     }
@@ -277,36 +268,6 @@ public class SimpleRNN {
         return -Math.log(probabilities[targetIndex] + 1e-9);// 1e-9 是防止 log(0) 出錯
     }
 
-    private int[] sample(int[] inputs, double[] hPrev) {
-        int[] result = new int[SEQ_LENGTH];
-        for (int seq = 0; seq < SEQ_LENGTH; seq++) {
-            result[seq] = getIdxFrom(inputs, hPrev, seq);
-        }
-        return result;
-    }
-
-    private int getIdxFrom(int[] inputs, double[] hPrev, int seq) {
-        int result = -1;
-        ForwardResult output = forward(inputs, hPrev);
-        double[] sampleProbabilities = output.y[seq];
-        System.out.println(formatArray(sampleProbabilities));
-        result = sampleFromProbabilities(output.y[seq]);
-        return result;
-    }
-
-    private String formatArray(double[] array) {
-        StringBuffer sb = new StringBuffer("(");
-        for (int i = 0; i < array.length; i++) {
-            sb.append(array[i]);
-            if (i < array.length - 1) {
-                sb.append(", ");
-            }
-        }
-        sb.append(")");
-        return sb.toString();
-
-    }
-
     // 前項傳播方法
     private ForwardResult forward(int[] inputs, double[] hPrev) {
         int T = inputs.length;
@@ -328,8 +289,6 @@ public class SimpleRNN {
 
             // 計算 softmax 輸出概率 pt
             result.y[t] = softmax(result.z[t]);
-
-            hPrev = result.h[t];
         }
         return result;
     }
@@ -387,8 +346,10 @@ public class SimpleRNN {
         int maxIndex = 0;
         double max = array[0];
         for (int i = 1; i < array.length; i++) {
-            if (array[i] > max)
+            if (array[i] > max) {
+                max = array[i];
                 maxIndex = i;
+            }
         }
         return maxIndex;
     }
@@ -396,9 +357,9 @@ public class SimpleRNN {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         SimpleRNN rnn = null;
         if (args[0].isEmpty() || args[0].contains("--train")) {
-            String data = "牛肉麵#牛肉麵#牛肉麵#";
+            String data = "牛肉麵#";
             rnn = new SimpleRNN(data);
-            rnn.train(data, 10000);
+            rnn.train(data, 800);
             rnn.generate(2, '牛');
             // TODO:確保準確率到 99.7% 再儲存
             //rnn.saveModel("rnn_model.dat");
@@ -446,11 +407,18 @@ public class SimpleRNN {
         int currentCharIdx = charToIdx.get(seedChar);
         for (int i = 0; i < length; i++) {
             ForwardResult result = forward(new int[]{currentCharIdx}, h);
+
             if (result == null) {
                 System.out.println("Error: Forward propagation failed");
                 return;
             }
+
             double[] probs = softmax(result.z[0]);
+            System.out.println("\nSoftmax 機率分布:");
+            for (int j = 0; j < probs.length; j++) {
+                System.out.printf("%s : %.4f     ", idxToChar.get(j), probs[j]);
+            }
+            System.out.println("\n");
             int nextCharIdx = argmax(probs);
             if (nextCharIdx < 0 || nextCharIdx >= vocabSize) {
                 System.out.println("Error: Invalid character index generated");
@@ -465,7 +433,7 @@ public class SimpleRNN {
             // 更新輸入和隱藏狀態
             x = new double[vocabSize];
             x[nextCharIdx] = 1.0;
-            h = result.h[result.h.length-1];
+            h = result.h[result.h.length - 1];
             currentCharIdx = nextCharIdx; // 使用當前字符的索引作為下一個輸入
         }
         System.out.println();
