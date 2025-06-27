@@ -53,7 +53,7 @@ public class SimpleRNN {
 
     public SimpleRNN(String data) {
         if (data.isEmpty()) return; // 表示是推理模式
-        
+
         char[] chars = data.toCharArray();
 
         int dataSize = chars.length;
@@ -361,12 +361,13 @@ public class SimpleRNN {
         if (args[0].isEmpty() || args[0].contains("--train")) {
             String data = "瑪爾濟斯#";
             rnn = new SimpleRNN(data);
-            rnn.train(data, 1200);
+            int iter = 1200;
+            rnn.train(data, iter);
             rnn.generate(3, '瑪');
-            rnn.saveModel("rnn_model_800.dat");
+            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model_800.dat");
+            rnn.loadModel("rnn_model_1200.dat");
             rnn.generate(3, '瑪');
         }
     }
