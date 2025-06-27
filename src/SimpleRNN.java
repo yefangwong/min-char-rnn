@@ -52,6 +52,8 @@ public class SimpleRNN {
     private Map<Integer, Character> idxToChar;
 
     public SimpleRNN(String data) {
+        if (data.isEmpty()) return; // 表示是推理模式
+        
         char[] chars = data.toCharArray();
 
         int dataSize = chars.length;
@@ -357,16 +359,15 @@ public class SimpleRNN {
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         SimpleRNN rnn = null;
         if (args[0].isEmpty() || args[0].contains("--train")) {
-            String data = "牛肉麵#";
+            String data = "瑪爾濟斯#";
             rnn = new SimpleRNN(data);
-            rnn.train(data, 800);
-            rnn.generate(2, '牛');
-            // TODO:確保準確率到 99.7% 再儲存
-            //rnn.saveModel("rnn_model.dat");
+            rnn.train(data, 1200);
+            rnn.generate(3, '瑪');
+            rnn.saveModel("rnn_model_800.dat");
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model.dat");
-            rnn.generate(2, '牛');
+            rnn.loadModel("rnn_model_800.dat");
+            rnn.generate(3, '瑪');
         }
     }
 
