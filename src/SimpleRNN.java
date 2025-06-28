@@ -360,11 +360,11 @@ public class SimpleRNN {
         SimpleRNN rnn = null;
 
         if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
-            String data = "瑪爾濟斯#";
+            String data = "鮭魚生魚片#";
             rnn = new SimpleRNN(data);
-            int iter = 1200;
+            int iter = 2700;
             rnn.train(data, iter);
-            rnn.generate(3, '瑪');
+            rnn.generate(4, '鮭');
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
