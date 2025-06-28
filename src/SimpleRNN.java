@@ -358,7 +358,8 @@ public class SimpleRNN {
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         SimpleRNN rnn = null;
-        if (args[0].isEmpty() || args[0].contains("--train")) {
+
+        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
             String data = "瑪爾濟斯#";
             rnn = new SimpleRNN(data);
             int iter = 1200;
