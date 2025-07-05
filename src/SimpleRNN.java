@@ -178,6 +178,12 @@ public class SimpleRNN {
             double[] dh = matrixVectorMultiply(transpose(why), dy);
             dh = add(dh, dhnext);
 
+            /**
+             * dhraw 是經過 tanh 激活函数的導數修正後的誤差訊號。
+             * 在反向傳播中，隱藏層的誤差 dh 需要乘以 tanh 函数的導數tanh(h)，
+             * 以反映激活函数對誤差的影響，從而得到對隱藏層输入的真實梯度 dhraw。
+             * 这个 dhraw 用於計算输入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
+             */
             double[] dhraw = multiply(dh, dtanh(forwardResult.h[t]));
 
             // 計算輸入層和隱藏層梯度
