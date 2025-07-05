@@ -381,13 +381,13 @@ public class SimpleRNN {
         SimpleRNN rnn = null;
 
         if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
-            String data = "鮭魚生魚片#";
-            //String data = "查詢所有保單數量->sele#";
+            //String data = "鮭魚生魚片#";
+            String data = "查詢所有保單數量->select * from table;#";
             rnn = new SimpleRNN(data);
-            int iter = 2600;
+            int iter = 11000;
             rnn.train(data, iter);
-            //rnn.generate(14, '查');
-            rnn.generate(4, '鮭');
+            rnn.generate(29, '查');
+            //rnn.generate(4, '鮭');
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
