@@ -171,8 +171,8 @@ public class SimpleRNN {
             dy[targets[t]] -= 1.0;
 
             // 計算輸出層梯度
-            grad.dwhy = outer(dy, forwardResult.h[t]);
-            grad.dby = dy;
+            grad.dwhy = add(grad.dwhy, outer(dy, forwardResult.h[t]));
+            grad.dby = add(grad.dby, dy);
 
             // 計算隱藏層梯度
             double[] dh = matrixVectorMultiply(transpose(why), dy);
@@ -181,9 +181,9 @@ public class SimpleRNN {
             double[] dhraw = multiply(dh, dtanh(forwardResult.h[t]));
 
             // 計算輸入層和隱藏層梯度
-            grad.dwxh = outer(dhraw, idxToOneHot(inputs[t]));
-            grad.dwhh = outer(dhraw, forwardResult.h[t]);
-            grad.dbh = dhraw;
+            grad.dwxh = add(grad.dwxh, outer(dhraw, idxToOneHot(inputs[t])));
+            grad.dwhh = add(grad.dwhh, outer(dhraw, forwardResult.h[t]));
+            grad.dbh = add(grad.dbh, dhraw);
 
             dhnext = matrixVectorMultiply(transpose(whh), dhraw);
         }
@@ -322,6 +322,16 @@ public class SimpleRNN {
         return result;
     }
 
+    private double[][] add(double[][] a, double[][] b) {
+        double[][] result = new double[a.length][a[0].length];
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < a[0].length; j++) {
+                result[i][j] = a[i][j] + b[i][j];
+            }
+        }
+        return result;
+    }
+
     // 簡化版的 tanh 函數
     private double[] tanh(double[] x) {
         double[] result = new double[x.length];
@@ -366,9 +376,11 @@ public class SimpleRNN {
 
         if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
             String data = "鮭魚生魚片#";
+            //String data = "查詢所有保單數量->sele#";
             rnn = new SimpleRNN(data);
-            int iter = 2700;
+            int iter = 2600;
             rnn.train(data, iter);
+            //rnn.generate(14, '查');
             rnn.generate(4, '鮭');
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
