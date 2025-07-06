@@ -192,8 +192,17 @@ public class SimpleRNN {
             grad.dbh = add(grad.dbh, dhraw);
 
             dhnext = matrixVectorMultiply(transpose(whh), dhraw);
+            System.out.println("t=" + t + ", dhnext norm=" + norm(dhnext));
         }
         return grad;
+    }
+
+    private double norm(double[] vector) {
+        double sum = 0.0;
+        for (double value : vector) {
+            sum += value * value;
+        }
+        return Math.sqrt(sum);
     }
 
     private void updateParameters(BackwardResult grad) {
@@ -377,25 +386,6 @@ public class SimpleRNN {
         return maxIndex;
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        SimpleRNN rnn = null;
-
-        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
-            //String data = "鮭魚生魚片#";
-            String data = "查詢所有保單數量->select * from table;#";
-            rnn = new SimpleRNN(data);
-            int iter = 11000;
-            rnn.train(data, iter);
-            rnn.generate(29, '查');
-            //rnn.generate(4, '鮭');
-            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
-        } else if (args[0].contains("--inference")) {
-            rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model_1200.dat");
-            rnn.generate(3, '瑪');
-        }
-    }
-
     private void loadModel(String fileName) throws IOException, ClassNotFoundException {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName))) {
             wxh = (double[][]) in.readObject();
@@ -475,5 +465,25 @@ public class SimpleRNN {
             result[i] = Math.exp(x[i]) / sum;
         }
         return result;
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        SimpleRNN rnn = null;
+
+        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
+            String data = "鮭魚生魚片#";
+            //String data = "查詢所有保單數量->select * from table;#";
+            rnn = new SimpleRNN(data);
+            //int iter = 30000;
+            int iter = 2600;
+            rnn.train(data, iter);
+            //rnn.generate(29, '查');
+            rnn.generate(4, '鮭');
+            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
+        } else if (args[0].contains("--inference")) {
+            rnn = new SimpleRNN("");
+            rnn.loadModel("rnn_model_1200.dat");
+            rnn.generate(3, '瑪');
+        }
     }
 }
