@@ -119,3 +119,6 @@ modules.xml
 
 ### Mac OS ###
 .DS_Store
+
+### Model ####
+.dat
