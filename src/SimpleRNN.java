@@ -38,7 +38,7 @@ import java.util.Random;
 
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
-    private static final int SEQ_LENGTH = 1; // 序列長度
+    private static final int SEQ_LENGTH = 25; // 序列長度
     private static final double LEARNING_RATE = 0.01; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
@@ -111,7 +111,10 @@ public class SimpleRNN {
 
             int[] inputs = new int[SEQ_LENGTH];
             int[] targets = new int[SEQ_LENGTH];
-            for (int i = 0; i < SEQ_LENGTH; i++) {
+            for (int i = 0; i < SEQ_LENGTH - 1; i++) {
+                if (i >= charToIdx.size() - 1) {
+                    break;
+                }
                 inputs[i] = charToIdx.get(data.charAt(p + i));
                 targets[i] = charToIdx.get(data.charAt(p + i + 1));
             }
@@ -127,7 +130,7 @@ public class SimpleRNN {
             hPrev = result.h[result.h.length - 1];
 
             // 計算 loss (Cross Entropy)
-            for (int t = 0; t < SEQ_LENGTH; t++) {
+            for (int t = 0; t < SEQ_LENGTH - 1; t++) {
                 loss += computeLoss(result.y[t], targets[t]);
             }
 
@@ -143,7 +146,7 @@ public class SimpleRNN {
             // 更新參數
             updateParameters(grad);
 
-            p += 1; // move data pointer
+            p += SEQ_LENGTH; // move data pointer
             n++; // iteration counter
         }
 
@@ -381,13 +384,11 @@ public class SimpleRNN {
         SimpleRNN rnn = null;
 
         if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
-            String data = "鮭魚生魚片#";
-            //String data = "查詢所有保單數量->sele#";
+            String data = "我只有一件事，就是忘記背後努力面前的，向著標竿直跑，要得 神在基督耶穌裏從上面召我來得的獎賞。#";
             rnn = new SimpleRNN(data);
-            int iter = 2600;
+            int iter = 15600;
             rnn.train(data, iter);
-            //rnn.generate(14, '查');
-            rnn.generate(4, '鮭');
+            rnn.generate(48, '我');
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
@@ -426,7 +427,7 @@ public class SimpleRNN {
         double[] h = new double[HIDDEN_SIZE]; // 初始隱藏狀態
         double[] x = new double[vocabSize]; // One-Hot 編碼
 
-        System.out.print(seedChar);
+        System.out.print(String.format("seedChar: %s", seedChar));
 
         x[charToIdx.get(seedChar)] = 1.0;
 
