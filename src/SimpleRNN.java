@@ -39,8 +39,8 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 25; // 序列長度
-    private static final double LEARNING_RATE = 0.01; // 學習率
-
+    private static final double LEARNING_RATE = 0.0001; // 學習率
+    private static int iterations = 31200; // 訓練次數
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
     private double[][] why; // 隱藏層到輸出層的權重矩陣
@@ -100,13 +100,13 @@ public class SimpleRNN {
 
     private double[][] randomMatrix(int rows, int cols) {
         Random rand = new Random();
-        double[][] matrix = new double[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                matrix[i][j] = rand.nextGaussian() * 0.01;
-            }
-        }
-        return matrix;
+        // 改用 Xavier 初始化 (適用於 tanh)
+        double scale = Math.sqrt(6.0 / (rows + cols));
+        return Arrays.stream(new double[rows][cols])
+                .map(row -> Arrays.stream(row)
+                        .map(v -> rand.nextGaussian() * scale)
+                        .toArray())
+                .toArray(double[][]::new);
     }
 
     private void train(String data, int iterations) {
@@ -120,7 +120,7 @@ public class SimpleRNN {
         double maxGradientNorm = 0.0;
         double avgGradientNorm = 0.0;
         int gradientExplodeCount = 0;
-        double gradientThreshold = 5.0; // 梯度爆炸閾值
+        double clipNorm = 5.0; // 梯度爆炸閾值
 
         System.out.println("initial smoothLoss:" + smoothLoss);
         while(n <= iterations) {
@@ -155,37 +155,40 @@ public class SimpleRNN {
                 loss += computeLoss(result.y[t], targets[t]);
             }
 
+            // 平滑系數調大，曲线更穩
+            final double smoothFactor = 0.999;
+            final double lossFactor   = 0.001;
+
             // 更新 smoothLoss
-            smoothLoss = smoothLoss * 0.99 + loss * 0.001;
+            smoothLoss = smoothLoss * smoothFactor + loss * lossFactor;
 
             // 反向傳播
             BackwardResult grad = backward(inputs, targets, result);
             
             // 計算梯度範數並監控梯度爆炸
             double gradientNorm = grad.calculateGradientNorm();
-            avgGradientNorm = (avgGradientNorm * n + gradientNorm) / (n + 1);
-            
-            if (gradientNorm > maxGradientNorm) {
-                maxGradientNorm = gradientNorm;
-            }
-            
-            // 檢測梯度爆炸
-            if (gradientNorm > gradientThreshold) {
+            avgGradientNorm = avgGradientNorm * smoothFactor + gradientNorm * (1 - smoothFactor);
+
+            // 全局梯度缩放 & 檢測梯度爆炸
+            if (gradientNorm > clipNorm) {
+                double scale = clipNorm / gradientNorm;
+                grad.scaleGradients(scale);
+                //System.out.println("Global gradient scaled at iteration " + n +
+                //        ", original norm: " + gradientNorm +
+                //        ", scaled factor: " + scale);
                 gradientExplodeCount++;
-                System.out.println("Warning: Gradient explosion detected at iteration " + n + 
-                                   ", gradient norm: " + gradientNorm);
+                //System.out.println("Warning: Gradient explosion detected at iteration " + n +
+                //        ", gradient norm: " + gradientNorm);
             }
 
             // 在更新參數前進行梯度裁剪
-            double beforeClipNorm = gradientNorm;
-            clipGradients(grad, 5.0); // 將梯度限制在 [-5.0, 5.0] 範圍內
             double afterClipNorm = grad.calculateGradientNorm();
             
             // 如果梯度被裁剪，輸出裁剪前後的梯度範數
-            if (Math.abs(beforeClipNorm - afterClipNorm) > 1e-6) {
-                System.out.println("Gradient clipped at iteration " + n + 
-                                  ", before: " + beforeClipNorm + 
-                                  ", after: " + afterClipNorm);
+            if (Math.abs(gradientNorm  - afterClipNorm) > 1e-6) {
+                //System.out.println("Gradient clipped at iteration " + n +
+                //                  ", before: " + gradientNorm  +
+                //                  ", after: " + afterClipNorm);
             }
 
             if (n % 100 == 0) {
@@ -197,7 +200,7 @@ public class SimpleRNN {
             }
 
             // 更新參數
-            updateParameters(grad);
+            updateParameters(grad, n);
 
             p += SEQ_LENGTH; // move data pointer
             n++; // iteration counter
@@ -209,6 +212,14 @@ public class SimpleRNN {
         System.out.println("Gradient statistics - Max Norm: " + maxGradientNorm + 
                           ", Avg Norm: " + avgGradientNorm + 
                           ", Explosion Count: " + gradientExplodeCount);
+    }
+
+    // 新增梯度裁剪方法
+    private double[] clipGradient(double[] grad, double threshold) {
+        double norm = Math.sqrt(Arrays.stream(grad).map(x->x*x).sum());
+        return norm > threshold ?
+                Arrays.stream(grad).map(x -> x*threshold/norm).toArray() :
+                grad;
     }
 
     private BackwardResult backward(int[] inputs, int[] targets, ForwardResult forwardResult) {
@@ -241,7 +252,7 @@ public class SimpleRNN {
              * dhraw 是經過 tanh 激活函数的導數修正後的誤差訊號。
              * 在反向傳播中，隱藏層的誤差 dh 需要乘以 tanh 函数的導數tanh(h)，
              * 以反映激活函数對誤差的影響，從而得到對隱藏層输入的真實梯度 dhraw。
-             * 这个 dhraw 用於計算输入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
+             * 這個 dhraw 用於計算输入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
              */
             double[] dhraw = multiply(dh, dtanh(forwardResult.h[t]));
 
@@ -251,72 +262,31 @@ public class SimpleRNN {
             grad.dbh = add(grad.dbh, dhraw);
 
             dhnext = matrixVectorMultiply(transpose(whh), dhraw);
+
+            // 增加局部梯度裁剪 (新增以下方法調用)
+            dhraw = clipGradient(dhraw, 1.0);  // 新增局部裁剪
+            dhnext = clipGradient(dhnext, 1.0); // 限制單個神經元梯度
+
+            // 添加梯度監控 (新增以下三行)
+            double gradNorm = Math.sqrt(Arrays.stream(dhnext).map(x -> x*x).sum());
+            double maxGrad = Arrays.stream(dhnext).max().orElse(0);
+            double minGrad = Arrays.stream(dhnext).min().orElse(0);
+            //System.out.printf("t=%d  dhnext norm=%.6f  max=%.6f  min=%.6f%n", t, gradNorm, maxGrad, minGrad);
         }
         return grad;
     }
 
-    // 梯度裁剪方法，將梯度值限制在指定範圍內
-    private void clipGradients(BackwardResult grad, double threshold) {
-        // 裁剪 dwxh
-        for (int i = 0; i < grad.dwxh.length; i++) {
-            for (int j = 0; j < grad.dwxh[0].length; j++) {
-                if (grad.dwxh[i][j] > threshold) {
-                    grad.dwxh[i][j] = threshold;
-                } else if (grad.dwxh[i][j] < -threshold) {
-                    grad.dwxh[i][j] = -threshold;
-                }
-            }
-        }
-        
-        // 裁剪 dwhh
-        for (int i = 0; i < grad.dwhh.length; i++) {
-            for (int j = 0; j < grad.dwhh[0].length; j++) {
-                if (grad.dwhh[i][j] > threshold) {
-                    grad.dwhh[i][j] = threshold;
-                } else if (grad.dwhh[i][j] < -threshold) {
-                    grad.dwhh[i][j] = -threshold;
-                }
-            }
-        }
-        
-        // 裁剪 dwhy
-        for (int i = 0; i < grad.dwhy.length; i++) {
-            for (int j = 0; j < grad.dwhy[0].length; j++) {
-                if (grad.dwhy[i][j] > threshold) {
-                    grad.dwhy[i][j] = threshold;
-                } else if (grad.dwhy[i][j] < -threshold) {
-                    grad.dwhy[i][j] = -threshold;
-                }
-            }
-        }
-        
-        // 裁剪 dbh
-        for (int i = 0; i < grad.dbh.length; i++) {
-            if (grad.dbh[i] > threshold) {
-                grad.dbh[i] = threshold;
-            } else if (grad.dbh[i] < -threshold) {
-                grad.dbh[i] = -threshold;
-            }
-        }
-        
-        // 裁剪 dby
-        for (int i = 0; i < grad.dby.length; i++) {
-            if (grad.dby[i] > threshold) {
-                grad.dby[i] = threshold;
-            } else if (grad.dby[i] < -threshold) {
-                grad.dby[i] = -threshold;
-            }
-        }
-    }
-    
-    private void updateParameters(BackwardResult grad) {
+    private void updateParameters(BackwardResult grad, int n) {
+        double process = n / (double)iterations;
+        double dynamicLR = LEARNING_RATE * (1.0 - process); // 線性衰減
+
         // 使用 Adagrad 優化器更新權重和偏差
         
         // 更新 wxh 及其記憶變數
         for (int i = 0; i < wxh.length; i++) {
             for (int j = 0; j < wxh[0].length; j++) {
                 mWxh[i][j] += grad.dwxh[i][j] * grad.dwxh[i][j];
-                wxh[i][j] -= LEARNING_RATE * grad.dwxh[i][j] / Math.sqrt(mWxh[i][j] + EPSILON);
+                wxh[i][j] -= dynamicLR * grad.dwxh[i][j] / Math.sqrt(mWxh[i][j] + EPSILON);
             }
         }
         
@@ -324,7 +294,7 @@ public class SimpleRNN {
         for (int i = 0; i < whh.length; i++) {
             for (int j = 0; j < whh[0].length; j++) {
                 mWhh[i][j] += grad.dwhh[i][j] * grad.dwhh[i][j];
-                whh[i][j] -= LEARNING_RATE * grad.dwhh[i][j] / Math.sqrt(mWhh[i][j] + EPSILON);
+                whh[i][j] -= dynamicLR * grad.dwhh[i][j] / Math.sqrt(mWhh[i][j] + EPSILON);
             }
         }
         
@@ -332,20 +302,20 @@ public class SimpleRNN {
         for (int i = 0; i < why.length; i++) {
             for (int j = 0; j < why[0].length; j++) {
                 mWhy[i][j] += grad.dwhy[i][j] * grad.dwhy[i][j];
-                why[i][j] -= LEARNING_RATE * grad.dwhy[i][j] / Math.sqrt(mWhy[i][j] + EPSILON);
+                why[i][j] -= dynamicLR * grad.dwhy[i][j] / Math.sqrt(mWhy[i][j] + EPSILON);
             }
         }
         
         // 更新 bh 及其記憶變數
         for (int i = 0; i < bh.length; i++) {
             mBh[i] += grad.dbh[i] * grad.dbh[i];
-            bh[i] -= LEARNING_RATE * grad.dbh[i] / Math.sqrt(mBh[i] + EPSILON);
+            bh[i] -= dynamicLR * grad.dbh[i] / Math.sqrt(mBh[i] + EPSILON);
         }
         
         // 更新 by 及其記憶變數
         for (int i = 0; i < by.length; i++) {
             mBy[i] += grad.dby[i] * grad.dby[i];
-            by[i] -= LEARNING_RATE * grad.dby[i] / Math.sqrt(mBy[i] + EPSILON);
+            by[i] -= dynamicLR * grad.dby[i] / Math.sqrt(mBy[i] + EPSILON);
         }
     }
 
@@ -363,42 +333,6 @@ public class SimpleRNN {
         double[] result = new double[x.length];
         for (int i = 0; i < x.length; i++) {
             result[i] = 1 - x[i] * x[i];
-        }
-        return result;
-    }
-
-    private double[][] scale(double[][] matrix, double factor) {
-        double[][] result = new double[matrix.length][matrix[0].length];
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[0].length; j++) {
-                result[i][j] = matrix[i][j] * factor;
-            }
-        }
-        return result;
-    }
-
-    private double[] scale(double[] vector, double factor) {
-        double[] result = new double[vector.length];
-        for (int i = 0; i < vector.length; i++) {
-            result[i] = vector[i] * factor;
-        }
-        return result;
-    }
-
-    private double[][] subtract(double[][] a, double[][] b) {
-        double[][] result = new double[a.length][a[0].length];
-        for (int i = 0; i < a.length; i++) {
-            for (int j = 0; j < a[0].length; j++) {
-                result[i][j] = a[i][j] - b[i][j];
-            }
-        }
-        return result;
-    }
-
-    private double[] subtract(double[] a, double[] b) {
-        double[] result = new double[a.length];
-        for (int i = 0; i < a.length; i++) {
-            result[i] = a[i] - b[i];
         }
         return result;
     }
@@ -523,7 +457,7 @@ public class SimpleRNN {
 
     // 從檔案讀取訓練資料 (支援 Big5 編碼)
     private static String readDataFromFile(String filePath) throws IOException {
-        return DataCleaner.cleanBibleText("resources" + File.separator + "hb5.txt");
+        return DataCleaner.cleanBibleText("resources" + File.separator + "hb5_utf8.txt");
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -533,7 +467,7 @@ public class SimpleRNN {
             String data;
             if (args.length >= 2 && args[1].contains("--file")) {
                 // 從檔案讀取訓練資料
-                String filePath = "resources/hb5.txt";
+                String filePath = "resources/hb5_utf8.txt";
                 if (args.length >= 3) {
                     filePath = args[2];
                 }
@@ -545,22 +479,21 @@ public class SimpleRNN {
             }
             
             rnn = new SimpleRNN(data);
-            int iter = 31200;
             if (args.length >= 3 && args[3].contains("--iter")) {
                 try {
-                    iter = Integer.parseInt(args[4]);
+                    iterations = Integer.parseInt(args[4]);
                 } catch (NumberFormatException e) {
-                    System.out.println("Invalid iteration number, using default: " + iter);
+                    System.out.println("Invalid iteration number, using default: " + iterations);
                 }
             }
             
-            System.out.println("Training with " + data.length() + " characters, " + iter + " iterations");
-            rnn.train(data, iter);
+            System.out.println("Training with " + data.length() + " characters, " + iterations + " iterations");
+            rnn.train(data, iterations);
             
             // 使用訓練資料的第一個字符作為生成的種子
             char seedChar = data.charAt(0);
             rnn.generate(48, seedChar);
-            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
+            rnn.saveModel(String.format("rnn_model_%d.dat", iterations));
         } else if (args[0].contains("--inference")) {
             String modelPath = "rnn_model_1200.dat";
             if (args.length >= 2) {

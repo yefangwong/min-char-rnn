@@ -43,4 +43,29 @@ public class BackwardResult {
         // 返回L2範數（平方和的平方根）
         return Math.sqrt(sumSquares);
     }
+
+    public void scaleGradients(double scale) {
+        // 缩放权重梯度
+        scaleMatrix(dwxh, scale);
+        scaleMatrix(dwhh, scale);
+        scaleMatrix(dwhy, scale);
+
+        // 缩放偏置梯度
+        scaleArray(dbh, scale);
+        scaleArray(dby, scale);
+    }
+
+    private void scaleMatrix(double[][] matrix, double scale) {
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[i].length; j++) {
+                matrix[i][j] *= scale;
+            }
+        }
+    }
+
+    private void scaleArray(double[] array, double scale) {
+        for (int i = 0; i < array.length; i++) {
+            array[i] *= scale;
+        }
+    }
 }

@@ -1,5 +1,6 @@
 import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 public class DataCleaner {
 
@@ -18,8 +19,7 @@ public class DataCleaner {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(
                         new FileInputStream(filePath),
-                        Charset.forName("Big5"
-                        )
+                        StandardCharsets.UTF_8
                 )
             )
         ) {
@@ -48,8 +48,27 @@ public class DataCleaner {
                     // Extract the substring starting from the first character after the second space
                     String bibleVerse = line.substring(secondSpaceIndex + 1);
 
+                    // 新增字符過濾邏輯
+                    StringBuilder filteredVerse = new StringBuilder();
+                    for (char c : bibleVerse.toCharArray()) {
+                        // 匹配中文、常見標點、數字和字母
+                        if (c >= 0x4E00 && c <= 0x9FFF ||  // 基本漢字
+                                c == ' '  ||               // 保留空格
+                                c == '，' || c == '。' ||  c == '．' || // 中文標點
+                                c == '、' || c == '；' ||
+                                c == '：' || c == '？' ||
+                                c == '！' || c == '“'  ||
+                                c == '”' || c == '（'  || c == '〔' ||
+                                c == '）' || c == '〕' || c == '—') {
+                            filteredVerse.append(c);
+                        } else {
+                            // 紀錄非法字符的ASCII碼值
+                            System.out.printf("發現非法字符: 0x%04x '%c'%n", (int) c, c);
+                        }
+                    }
+
                     // Append the cleaned text (should now be pure Chinese text)
-                    cleanedText.append(bibleVerse).append('\n');
+                    cleanedText.append(filteredVerse.toString());
                 }
                 // Ignore if the line is empty or incorrectly formatted
             }
