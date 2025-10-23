@@ -391,8 +391,8 @@ public class SimpleRNN {
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
             rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model_1200.dat");
-            rnn.generate(3, '瑪');
+            rnn.loadModel("rnn_model_2600.dat");
+            rnn.generate(4, '鮭');
         }
     }
 
