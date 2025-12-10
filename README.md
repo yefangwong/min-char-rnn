@@ -29,8 +29,9 @@ This project implements a simple RNN from scratch to learn character sequences a
 - Parameter updates use gradient descent with a fixed learning rate.
 
 ## Notes
-
-- Sequence length is fixed to 1 for simplicity.
+*  ~~Sequence length is fixed to 1 for simplicity.~~ 
+*  **Sequence length (SEQ_LENGTH) is now set to 25, aligning with the original Python implementation to facilitate the learning of intermediate temporal dependencies.** 
+*  The recurrent logic in the `forward` pass has been corrected to ensure proper propagation of the hidden state across time steps.
 - The model uses one-hot encoding for input characters.
 - Random initialization of weights with small Gaussian noise.
 - Designed for educational purposes to understand RNN internals.

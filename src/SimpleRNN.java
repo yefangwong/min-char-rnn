@@ -39,8 +39,9 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 25; // 序列長度
-    private static final double LEARNING_RATE = 0.0001; // 學習率
     private static int iterations = 31200; // 訓練次數
+    private static final double LEARNING_RATE = 0.001; // 學習率
+
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
     private double[][] why; // 隱藏層到輸出層的權重矩陣
@@ -132,10 +133,8 @@ public class SimpleRNN {
 
             int[] inputs = new int[SEQ_LENGTH];
             int[] targets = new int[SEQ_LENGTH];
-            for (int i = 0; i < SEQ_LENGTH - 1; i++) {
-                if (i >= charToIdx.size() - 1) {
-                    break;
-                }
+            for (int i = 0; i < SEQ_LENGTH; i++) {
+                if (i == data.length() - 1) break;
                 inputs[i] = charToIdx.get(data.charAt(p + i));
                 targets[i] = charToIdx.get(data.charAt(p + i + 1));
             }
@@ -370,10 +369,16 @@ public class SimpleRNN {
         result.y = new double[T][V];
         result.z = new double[T][V];
 
+        // 假設 hPrev 是輸入序列前的初始狀態 h[-1]
+        double[] h_t_minus_1 = hPrev; // 初始化迴圈內部的「前一個狀態」
+
         for (int t = 0; t < inputs.length; t++) {
             // 計算隱藏層狀態 ht = tanh(xt * Wxh + ht-1 * Whh + hb)
             result.h[t] = tanh(add(matrixVectorMultiply(this.wxh, idxToOneHot(inputs[t])),
-                        add(matrixVectorMultiply(this.whh, hPrev), this.bh)));
+                        add(matrixVectorMultiply(this.whh, h_t_minus_1), this.bh)));
+
+            // 更新「前一個狀態變數」，供下一個時間步使用
+            h_t_minus_1 = result.h[t];
 
             // 計算輸出層的 yt = Why * ht + by
             result.z[t] = add(matrixVectorMultiply(this.why, result.h[t]), this.by);
