@@ -264,7 +264,8 @@ public class SimpleRNN {
 
             // 計算輸入層和隱藏層梯度
             grad.dwxh = add(grad.dwxh, outer(dhraw, idxToOneHot(inputs[t])));
-            grad.dwhh = add(grad.dwhh, outer(dhraw, forwardResult.h[t]));
+            // 使用前一時間步的隱藏態 h[t-1]
+            grad.dwhh = add(grad.dwhh, outer(dhraw, forwardResult.hPrev[t]));
             grad.dbh = add(grad.dbh, dhraw);
 
             dhnext = matrixVectorMultiply(transpose(whh), dhraw);
@@ -373,24 +374,25 @@ public class SimpleRNN {
 
         ForwardResult result = new ForwardResult();
         result.h = new double[T][H];
+        result.hPrev = new double[T][H];
         result.y = new double[T][V];
         result.z = new double[T][V];
 
-        // 假設 hPrev 是輸入序列前的初始狀態 h[-1]
-        double[] h_t_minus_1 = hPrev; // 初始化迴圈內部的「前一個狀態」
+        double[] h_t_minus_1 = hPrev;
 
         for (int t = 0; t < inputs.length; t++) {
+            // 儲存本步驟的前一隱藏態 h[t-1]
+            result.hPrev[t] = Arrays.copyOf(h_t_minus_1, h_t_minus_1.length);
+
             // 計算隱藏層狀態 ht = tanh(xt * Wxh + ht-1 * Whh + hb)
             result.h[t] = tanh(add(matrixVectorMultiply(this.wxh, idxToOneHot(inputs[t])),
                         add(matrixVectorMultiply(this.whh, h_t_minus_1), this.bh)));
 
-            // 更新「前一個狀態變數」，供下一個時間步使用
+            // 更新前一狀態
             h_t_minus_1 = result.h[t];
 
-            // 計算輸出層的 yt = Why * ht + by
+            // 計算輸出層與 softmax
             result.z[t] = add(matrixVectorMultiply(this.why, result.h[t]), this.by);
-
-            // 計算 softmax 輸出概率 pt
             result.y[t] = softmax(result.z[t]);
         }
         return result;
@@ -443,21 +445,21 @@ public class SimpleRNN {
         return oneHot;
     }
 
-    private int sampleFromProbabilities(double[] probabilities) {
-        double randomValue = Math.random();
-        double cumulativeProbability = 0.0;
-        for (int i = 0; i < probabilities.length; i++) {
-          cumulativeProbability += probabilities[i];
-          if (randomValue <= cumulativeProbability) {
-              return i;
-          }
-        }
-        return probabilities.length - 1;
-    }
-
     // 從檔案讀取訓練資料 (支援 Big5 編碼)
     private static String readDataFromFile(String filePath) throws IOException {
         return DataCleaner.cleanBibleText("resources" + File.separator + "hb5_utf8.txt");
+    }
+
+    private int argmax(double[] array) {
+        int maxIndex = 0;
+        double max = array[0];
+        for (int i = 1; i < array.length; i++) {
+            if (array[i] > max) {
+                max = array[i];
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
     }
 
     private void loadModel(String fileName) throws IOException, ClassNotFoundException {
@@ -543,6 +545,18 @@ public class SimpleRNN {
         }
         System.out.println("\n");
         System.out.println(sb.toString());
+    }
+
+    private int sampleFromProbabilities(double[] probabilities) {
+        double randomValue = Math.random();
+        double cumulativeProbability = 0.0;
+        for (int i = 0; i < probabilities.length; i++) {
+            cumulativeProbability += probabilities[i];
+            if (randomValue <= cumulativeProbability) {
+                return i;
+            }
+        }
+        return probabilities.length - 1;
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
