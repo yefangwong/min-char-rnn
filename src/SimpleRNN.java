@@ -112,8 +112,15 @@ public class SimpleRNN {
             int[] inputs = new int[SEQ_LENGTH];
             int[] targets = new int[SEQ_LENGTH];
             for (int i = 0; i < SEQ_LENGTH; i++) {
-                if (i == data.length() - 1) break;
+                // 檢查目標字符的索引 (p + i + 1) 是否超出總資料長度
+                // 如果下一個字符 (p + i + 1) 不存在，則代表資料切片結束，必須跳出
+                if (p + i + 1 >= data.length()) {
+                    break;
+                }
+
+                // 讀取當前輸入字符（p + i）
                 inputs[i] = charToIdx.get(data.charAt(p + i));
+                // 讀取下一個目標字符（p + i + 1）
                 targets[i] = charToIdx.get(data.charAt(p + i + 1));
             }
             double loss = 0;
