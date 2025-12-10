@@ -283,11 +283,11 @@ public class SimpleRNN {
     }
 
     private void updateParameters(BackwardResult grad, int n) {
-        double process = n / (double)iterations;
+        double process = n / (double) iterations;
         double dynamicLR = LEARNING_RATE * (1.0 - process); // 線性衰減
 
         // 使用 Adagrad 優化器更新權重和偏差
-        
+
         // 更新 wxh 及其記憶變數
         for (int i = 0; i < wxh.length; i++) {
             for (int j = 0; j < wxh[0].length; j++) {
@@ -295,7 +295,7 @@ public class SimpleRNN {
                 wxh[i][j] -= dynamicLR * grad.dwxh[i][j] / Math.sqrt(mWxh[i][j] + EPSILON);
             }
         }
-        
+
         // 更新 whh 及其記憶變數
         for (int i = 0; i < whh.length; i++) {
             for (int j = 0; j < whh[0].length; j++) {
@@ -303,7 +303,7 @@ public class SimpleRNN {
                 whh[i][j] -= dynamicLR * grad.dwhh[i][j] / Math.sqrt(mWhh[i][j] + EPSILON);
             }
         }
-        
+
         // 更新 why 及其記憶變數
         for (int i = 0; i < why.length; i++) {
             for (int j = 0; j < why[0].length; j++) {
@@ -311,13 +311,13 @@ public class SimpleRNN {
                 why[i][j] -= dynamicLR * grad.dwhy[i][j] / Math.sqrt(mWhy[i][j] + EPSILON);
             }
         }
-        
+
         // 更新 bh 及其記憶變數
         for (int i = 0; i < bh.length; i++) {
             mBh[i] += grad.dbh[i] * grad.dbh[i];
             bh[i] -= dynamicLR * grad.dbh[i] / Math.sqrt(mBh[i] + EPSILON);
         }
-        
+
         // 更新 by 及其記憶變數
         for (int i = 0; i < by.length; i++) {
             mBy[i] += grad.dby[i] * grad.dby[i];
@@ -455,21 +455,94 @@ public class SimpleRNN {
         return probabilities.length - 1;
     }
 
-    private int argmax(double[] array) {
-        int maxIndex = 0;
-        double max = array[0];
-        for (int i = 1; i < array.length; i++) {
-            if (array[i] > max) {
-                max = array[i];
-                maxIndex = i;
-            }
-        }
-        return maxIndex;
-    }
-
     // 從檔案讀取訓練資料 (支援 Big5 編碼)
     private static String readDataFromFile(String filePath) throws IOException {
         return DataCleaner.cleanBibleText("resources" + File.separator + "hb5_utf8.txt");
+    }
+
+    private void loadModel(String fileName) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName))) {
+            wxh = (double[][]) in.readObject();
+            whh = (double[][]) in.readObject();
+            why = (double[][]) in.readObject();
+            bh = (double[]) in.readObject();
+            by = (double[]) in.readObject();
+            charToIdx = (Map<Character, Integer>) in.readObject();
+            idxToChar = (Map<Integer, Character>) in.readObject();
+            vocabSize = charToIdx.size();
+        }
+    }
+
+    private void saveModel(String fileName) throws IOException {
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName))) {
+            out.writeObject(wxh);
+            out.writeObject(whh);
+            out.writeObject(why);
+            out.writeObject(bh);
+            out.writeObject(by);
+            out.writeObject(charToIdx);
+            out.writeObject(idxToChar);
+        }
+    }
+
+    private double[] softmax(double[] x) {
+        double[] result = new double[x.length];
+        double sum = 0.0;
+        for (double value : x) {
+            sum += Math.exp(value);
+        }
+        for (int i = 0; i < x.length; i++) {
+            result[i] = Math.exp(x[i]) / sum;
+        }
+        return result;
+    }
+
+    // 使用模型生成長序列
+    private void generate(int length, char seedChar) {
+        double[] h = new double[HIDDEN_SIZE]; // 初始隱藏狀態
+        double[] x = new double[vocabSize]; // One-Hot 編碼
+
+        System.out.print(String.format("seedChar: %s", seedChar));
+
+        x[charToIdx.get(seedChar)] = 1.0;
+
+        int currentCharIdx = charToIdx.get(seedChar);
+        StringBuffer sb = new StringBuffer();
+        sb.append(seedChar);
+        for (int i = 0; i < length; i++) {
+            ForwardResult result = forward(new int[]{currentCharIdx}, h);
+
+            if (result == null) {
+                System.out.println("Error: Forward propagation failed");
+                return;
+            }
+
+            double[] probs = result.y[0];
+            System.out.println("\nSoftmax 機率分布:");
+            for (int j = 0; j < probs.length; j++) {
+                System.out.printf("%s : %.4f     ", idxToChar.get(j), probs[j]);
+            }
+            System.out.println("\n");
+            int nextCharIdx = this.sampleFromProbabilities(probs);
+            if (nextCharIdx < 0 || nextCharIdx >= vocabSize) {
+                System.out.println("Error: Invalid character index generated");
+                return;
+            }
+            char nextChar = idxToChar.get(nextCharIdx);
+            if (nextChar == '#') {
+                break; // 停止輸出
+            }
+            sb.append(nextChar);
+            System.out.print(nextChar);
+
+            // 更新輸入和隱藏狀態
+            x = new double[vocabSize];
+            x[nextCharIdx] = 1.0;
+            h = result.h[result.h.length - 1];
+            currentCharIdx = nextCharIdx; // 使用當前字符的索引作為下一個輸入
+        }
+        System.out.println("\n");
+        System.out.println(sb.toString());
     }
 
     public static void main(String[] args) throws IOException, ClassNotFoundException {
@@ -531,90 +604,5 @@ public class SimpleRNN {
             
             rnn.generate(genLength, seedChar);
         }
-    }
-
-    private void loadModel(String fileName) throws IOException, ClassNotFoundException {
-        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName))) {
-            wxh = (double[][]) in.readObject();
-            whh = (double[][]) in.readObject();
-            why = (double[][]) in.readObject();
-            bh = (double[]) in.readObject();
-            by = (double[]) in.readObject();
-            charToIdx = (Map<Character, Integer>) in.readObject();
-            idxToChar = (Map<Integer, Character>) in.readObject();
-            vocabSize = charToIdx.size();
-        }
-    }
-
-    private void saveModel(String fileName) throws IOException {
-        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(fileName))) {
-            out.writeObject(wxh);
-            out.writeObject(whh);
-            out.writeObject(why);
-            out.writeObject(bh);
-            out.writeObject(by);
-            out.writeObject(charToIdx);
-            out.writeObject(idxToChar);
-        }
-    }
-
-    // 使用模型生成長序列
-    private void generate(int length, char seedChar) {
-        double[] h = new double[HIDDEN_SIZE]; // 初始隱藏狀態
-        double[] x = new double[vocabSize]; // One-Hot 編碼
-
-        System.out.print(String.format("seedChar: %s", seedChar));
-
-        x[charToIdx.get(seedChar)] = 1.0;
-
-        int currentCharIdx = charToIdx.get(seedChar);
-        StringBuffer sb = new StringBuffer();
-        sb.append(seedChar);
-        for (int i = 0; i < length; i++) {
-            ForwardResult result = forward(new int[]{currentCharIdx}, h);
-
-            if (result == null) {
-                System.out.println("Error: Forward propagation failed");
-                return;
-            }
-
-            double[] probs = softmax(result.z[0]);
-            System.out.println("\nSoftmax 機率分布:");
-            for (int j = 0; j < probs.length; j++) {
-                System.out.printf("%s : %.4f     ", idxToChar.get(j), probs[j]);
-            }
-            System.out.println("\n");
-            int nextCharIdx = this.sampleFromProbabilities(probs);
-            if (nextCharIdx < 0 || nextCharIdx >= vocabSize) {
-                System.out.println("Error: Invalid character index generated");
-                return;
-            }
-            char nextChar = idxToChar.get(nextCharIdx);
-            if (nextChar == '#') {
-                break; // 停止輸出
-            }
-            sb.append(nextChar);
-            System.out.print(nextChar);
-
-            // 更新輸入和隱藏狀態
-            x = new double[vocabSize];
-            x[nextCharIdx] = 1.0;
-            h = result.h[result.h.length - 1];
-            currentCharIdx = nextCharIdx; // 使用當前字符的索引作為下一個輸入
-        }
-        System.out.println("\n");
-        System.out.println(sb.toString());
-    }
-
-    private double[] softmax(double[] x) {
-        double[] result = new double[x.length];
-        double sum = 0.0;
-        for (double value : x) {
-            sum += Math.exp(value);
-        }
-        for (int i = 0; i < x.length; i++) {
-            result[i] = Math.exp(x[i]) / sum;
-        }
-        return result;
     }
 }
