@@ -205,14 +205,6 @@ public class SimpleRNN {
         return grad;
     }
 
-    private double norm(double[] vector) {
-        double sum = 0.0;
-        for (double value : vector) {
-            sum += value * value;
-        }
-        return Math.sqrt(sum);
-    }
-
     private void updateParameters(BackwardResult grad) {
         // 更新權重和偏差
         wxh = subtract(wxh, scale(grad.dwxh, LEARNING_RATE));
@@ -400,25 +392,6 @@ public class SimpleRNN {
         return maxIndex;
     }
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        SimpleRNN rnn = null;
-
-        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
-            String data = "鮭魚生魚片#";
-            //String data = "查詢所有保單數量->sele#";
-            rnn = new SimpleRNN(data);
-            int iter = 2600;
-            rnn.train(data, iter);
-            //rnn.generate(14, '查');
-            rnn.generate(4, '鮭');
-            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
-        } else if (args[0].contains("--inference")) {
-            rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model_2600.dat");
-            rnn.generate(4, '鮭');
-        }
-    }
-
     private void loadModel(String fileName) throws IOException, ClassNotFoundException {
         try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(fileName))) {
             wxh = (double[][]) in.readObject();
@@ -462,7 +435,7 @@ public class SimpleRNN {
                 return;
             }
 
-            double[] probs = softmax(result.z[0]);
+            double[] probs = result.y[0];
             System.out.println("\nSoftmax 機率分布:");
             for (int j = 0; j < probs.length; j++) {
                 System.out.printf("%s : %.4f     ", idxToChar.get(j), probs[j]);
@@ -498,5 +471,24 @@ public class SimpleRNN {
             result[i] = Math.exp(x[i]) / sum;
         }
         return result;
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        SimpleRNN rnn = null;
+
+        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
+            String data = "鮭魚生魚片#";
+            //String data = "查詢所有保單數量->sele#";
+            rnn = new SimpleRNN(data);
+            int iter = 2600;
+            rnn.train(data, iter);
+            //rnn.generate(14, '查');
+            rnn.generate(4, '鮭');
+            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
+        } else if (args[0].contains("--inference")) {
+            rnn = new SimpleRNN("");
+            rnn.loadModel("rnn_model_2600.dat");
+            rnn.generate(4, '鮭');
+        }
     }
 }
