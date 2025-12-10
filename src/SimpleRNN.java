@@ -190,27 +190,20 @@ public class SimpleRNN {
              * dhraw 是經過 tanh 激活函数的導數修正後的誤差訊號。
              * 在反向傳播中，隱藏層的誤差 dh 需要乘以 tanh 函数的導數tanh(h)，
              * 以反映激活函数對誤差的影響，從而得到對隱藏層输入的真實梯度 dhraw。
-             * 这个 dhraw 用於計算输入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
+             * 這個 dhraw 用於計算輸入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
              */
             double[] dhraw = multiply(dh, dtanh(forwardResult.h[t]));
 
             // 計算輸入層和隱藏層梯度
             grad.dwxh = add(grad.dwxh, outer(dhraw, idxToOneHot(inputs[t])));
-            grad.dwhh = add(grad.dwhh, outer(dhraw, forwardResult.h[t]));
+            // 使用前一時間步的隱藏態 h[t-1]
+            grad.dwhh = add(grad.dwhh, outer(dhraw, forwardResult.hPrev[t]));
             grad.dbh = add(grad.dbh, dhraw);
 
             dhnext = matrixVectorMultiply(transpose(whh), dhraw);
             //System.out.println("t=" + t + ", dhnext norm=" + norm(dhnext));
         }
         return grad;
-    }
-
-    private double norm(double[] vector) {
-        double sum = 0.0;
-        for (double value : vector) {
-            sum += value * value;
-        }
-        return Math.sqrt(sum);
     }
 
     private void updateParameters(BackwardResult grad) {
@@ -306,24 +299,25 @@ public class SimpleRNN {
 
         ForwardResult result = new ForwardResult();
         result.h = new double[T][H];
+        result.hPrev = new double[T][H];
         result.y = new double[T][V];
         result.z = new double[T][V];
 
-        // 假設 hPrev 是輸入序列前的初始狀態 h[-1]
-        double[] h_t_minus_1 = hPrev; // 初始化迴圈內部的「前一個狀態」
+        double[] h_t_minus_1 = hPrev;
 
         for (int t = 0; t < inputs.length; t++) {
+            // 儲存本步驟的前一隱藏態 h[t-1]
+            result.hPrev[t] = Arrays.copyOf(h_t_minus_1, h_t_minus_1.length);
+
             // 計算隱藏層狀態 ht = tanh(xt * Wxh + ht-1 * Whh + hb)
             result.h[t] = tanh(add(matrixVectorMultiply(this.wxh, idxToOneHot(inputs[t])),
                         add(matrixVectorMultiply(this.whh, h_t_minus_1), this.bh)));
 
-            // 更新「前一個狀態變數」，供下一個時間步使用
+            // 更新前一狀態
             h_t_minus_1 = result.h[t];
 
-            // 計算輸出層的 yt = Why * ht + by
+            // 計算輸出層與 softmax
             result.z[t] = add(matrixVectorMultiply(this.why, result.h[t]), this.by);
-
-            // 計算 softmax 輸出概率 pt
             result.y[t] = softmax(result.z[t]);
         }
         return result;
@@ -376,18 +370,6 @@ public class SimpleRNN {
         return oneHot;
     }
 
-    private int sampleFromProbabilities(double[] probabilities) {
-        double randomValue = Math.random();
-        double cumulativeProbability = 0.0;
-        for (int i = 0; i < probabilities.length; i++) {
-          cumulativeProbability += probabilities[i];
-          if (randomValue <= cumulativeProbability) {
-              return i;
-          }
-        }
-        return probabilities.length - 1;
-    }
-
     private int argmax(double[] array) {
         int maxIndex = 0;
         double max = array[0];
@@ -398,25 +380,6 @@ public class SimpleRNN {
             }
         }
         return maxIndex;
-    }
-
-    public static void main(String[] args) throws IOException, ClassNotFoundException {
-        SimpleRNN rnn = null;
-
-        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
-            String data = "鮭魚生魚片#";
-            //String data = "查詢所有保單數量->sele#";
-            rnn = new SimpleRNN(data);
-            int iter = 2600;
-            rnn.train(data, iter);
-            //rnn.generate(14, '查');
-            rnn.generate(4, '鮭');
-            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
-        } else if (args[0].contains("--inference")) {
-            rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model_2600.dat");
-            rnn.generate(4, '鮭');
-        }
     }
 
     private void loadModel(String fileName) throws IOException, ClassNotFoundException {
@@ -462,7 +425,7 @@ public class SimpleRNN {
                 return;
             }
 
-            double[] probs = softmax(result.z[0]);
+            double[] probs = result.y[0];
             System.out.println("\nSoftmax 機率分布:");
             for (int j = 0; j < probs.length; j++) {
                 System.out.printf("%s : %.4f     ", idxToChar.get(j), probs[j]);
@@ -498,5 +461,24 @@ public class SimpleRNN {
             result[i] = Math.exp(x[i]) / sum;
         }
         return result;
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        SimpleRNN rnn = null;
+
+        if (args.length == 0 || (args[0].isEmpty() || args[0].contains("--train"))) {
+            String data = "鮭魚生魚片#";
+            //String data = "查詢所有保單數量->sele#";
+            rnn = new SimpleRNN(data);
+            int iter = 2600;
+            rnn.train(data, iter);
+            //rnn.generate(14, '查');
+            rnn.generate(4, '鮭');
+            rnn.saveModel(String.format("rnn_model_%d.dat", iter));
+        } else if (args[0].contains("--inference")) {
+            rnn = new SimpleRNN("");
+            rnn.loadModel("rnn_model_2600.dat");
+            rnn.generate(4, '鮭');
+        }
     }
 }
