@@ -295,7 +295,7 @@ public class SimpleRNN {
     private ForwardResult forward(int[] inputs, double[] hPrev) {
         int T = inputs.length;
         int H = whh.length;
-        int V = whh[0].length;
+        int V = vocabSize;
 
         ForwardResult result = new ForwardResult();
         result.h = new double[T][H];
