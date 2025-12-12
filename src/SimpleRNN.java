@@ -157,7 +157,7 @@ public class SimpleRNN {
             hPrev = result.h[result.h.length - 1];
 
             // 計算 loss (Cross Entropy)
-            for (int t = 0; t < SEQ_LENGTH - 1; t++) {
+            for (int t = 0; t < SEQ_LENGTH; t++) {
                 loss += computeLoss(result.y[t], targets[t]);
             }
 
