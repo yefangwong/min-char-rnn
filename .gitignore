@@ -120,5 +120,5 @@ modules.xml
 ### Mac OS ###
 .DS_Store
 
-### Model ####
-**/*.dat
+# Ignore model file
+rnn_model_2600.dat
