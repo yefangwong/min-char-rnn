@@ -476,9 +476,27 @@ public class SimpleRNN {
             rnn.generate(4, '鮭');
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
+            if (args.length < 3) { // Expect at least --inference <model_path> <seed_char>
+                System.out.println("Usage for inference: java SimpleRNN --inference <model_path> <seed_char> [generate_length]");
+                return;
+            }
+            String modelPath = args[1];
+            char seedChar = args[2].charAt(0);
+            int generateLength = 20; // Default generation length
+
+            if (args.length > 3) { // Optional generate_length
+                try {
+                    generateLength = Integer.parseInt(args[3]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid generate_length. Using default: " + generateLength);
+                }
+            }
+
             rnn = new SimpleRNN("");
-            rnn.loadModel("rnn_model_2600.dat");
-            rnn.generate(4, '鮭');
+            System.out.println("Loading model from: " + modelPath);
+            rnn.loadModel(modelPath);
+            System.out.println("Model loaded. Generating sequence from '" + seedChar + "' (length: " + generateLength + ")");
+            rnn.generate(generateLength, seedChar);
         }
     }
 }
