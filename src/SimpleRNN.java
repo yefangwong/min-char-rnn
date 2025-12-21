@@ -39,7 +39,7 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 25; // 序列長度
-    private static final double LEARNING_RATE = 0.01; // 學習率
+    private static final double LEARNING_RATE = 0.0001; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
@@ -470,10 +470,15 @@ public class SimpleRNN {
             String data = "鮭魚生魚片#";
             //String data = "查詢所有保單數量->sele#";
             rnn = new SimpleRNN(data);
-            int iter = 2600;
+            int iter = 20800;
             rnn.train(data, iter);
-            //rnn.generate(14, '查');
-            rnn.generate(4, '鮭');
+
+            System.out.println("\n--- Generating from '鮭' ---");
+            rnn.generate(4, '鮭'); // Target: 鮭魚生魚片
+
+            System.out.println("\n--- Generating from '生' ---");
+            rnn.generate(3, '生'); // Target: 生魚片
+
             rnn.saveModel(String.format("rnn_model_%d.dat", iter));
         } else if (args[0].contains("--inference")) {
             if (args.length < 3) { // Expect at least --inference <model_path> <seed_char>
