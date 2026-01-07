@@ -30,6 +30,8 @@
  * BSD license.
  */
 
+import logging.LossLogger;
+
 import java.io.*;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -133,7 +135,14 @@ public class SimpleRNN {
         int gradientExplodeCount = 0;
         double clipNorm = 5.0; // 梯度爆炸閾值
 
+        LossLogger logger = new LossLogger(
+                "loss.csv",
+                LossLogger.LogLevel.AUDIT,
+                100
+        );
+
         System.out.println("initial smoothLoss:" + smoothLoss);
+        logger.log(n, 0, smoothLoss);
         while(n <= iterations) {
             //System.out.println("iter:" + n + " starts --------------------------------");
             if ((p + SEQ_LENGTH >= data.length() || n == 0)) {
@@ -220,7 +229,10 @@ public class SimpleRNN {
 
             p += 1; // move data pointer
             n++; // iteration counter
+            logger.log(n, loss, smoothLoss);
         }
+
+        logger.close();
 
         long endTime = System.currentTimeMillis(); // 紀錄結束時間 (毫秒)
         double elapsedTime = (endTime - startTime) / 1000.0; // 轉換為秒
@@ -643,20 +655,9 @@ public class SimpleRNN {
             }
 
             System.out.println("Training with " + data.length() + " characters, " + iterations + " iterations");
-            rnn.train(data, iterations);
-
             // 使用訓練資料的第一個字符作為生成的種子
             char seedChar = data.charAt(0);
-            rnn.generate(48, seedChar);
-            rnn.saveModel(String.format("rnn_model_%d.dat", iterations));
             rnn.train(data, iterations);
-
-            System.out.println("\n--- Generating from '鮭' ---");
-            rnn.generate(4, '鮭'); // Target: 鮭魚生魚片
-
-            System.out.println("\n--- Generating from '生' ---");
-            rnn.generate(3, '生'); // Target: 生魚片
-
             rnn.saveModel(String.format("rnn_model_%d.dat", iterations));
         } else if (args[0].contains("--inference")) {
             String modelPath = "rnn_model_1200.dat";
@@ -669,10 +670,8 @@ public class SimpleRNN {
                 return;
             }
 
-            char seedChar = '我';
-            if (args.length >= 3) {
-                seedChar = args[2].charAt(0);
-            }
+            char seedChar = args[2].charAt(0);
+
             int genLength = 48; // Default generation length
             if (args.length >= 4) {
                 try {
