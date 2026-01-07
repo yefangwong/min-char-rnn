@@ -39,7 +39,7 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 25; // 序列長度
-    private static int iterations = 31200; // 訓練次數
+    private static int iterations = 20800; // 訓練次數
     private static final double LEARNING_RATE = 0.001; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
@@ -47,7 +47,7 @@ public class SimpleRNN {
     private double[][] why; // 隱藏層到輸出層的權重矩陣
     private double[] bh;    // 隱藏層的 bias
     private double[] by;    // 輸出層的 bias
-    
+
     // Adagrad 優化器的記憶變數
     private double[][] mWxh; // wxh 的梯度平方累積
     private double[][] mWhh; // whh 的梯度平方累積
@@ -90,7 +90,7 @@ public class SimpleRNN {
         why = randomMatrix(vocabSize, HIDDEN_SIZE);   // 隱藏層到輸出層權重
         bh = new double[HIDDEN_SIZE];                 // 隱藏層 bias
         by = new double[vocabSize];                   // 輸出層 bias
-        
+
         // 初始化 Adagrad 記憶變數
         mWxh = new double[HIDDEN_SIZE][vocabSize];
         mWhh = new double[HIDDEN_SIZE][HIDDEN_SIZE];
@@ -101,13 +101,23 @@ public class SimpleRNN {
 
     private double[][] randomMatrix(int rows, int cols) {
         Random rand = new Random();
-        // 改用 Xavier 初始化 (適用於 tanh)
+        double[][] matrix = new double[rows][cols];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                matrix[i][j] = rand.nextGaussian() * 0.01;
+            }
+        }
+        return matrix;
+        /*
+                // 改用 Xavier 初始化 (適用於 tanh)
         double scale = Math.sqrt(6.0 / (rows + cols));
         return Arrays.stream(new double[rows][cols])
                 .map(row -> Arrays.stream(row)
                         .map(v -> rand.nextGaussian() * scale)
                         .toArray())
                 .toArray(double[][]::new);
+
+         */
     }
 
     private void train(String data, int iterations) {
@@ -116,7 +126,7 @@ public class SimpleRNN {
         int p = 0;
         double smoothLoss = -Math.log(1.0 / vocabSize) * SEQ_LENGTH;
         double[] hPrev = new double[HIDDEN_SIZE]; // 重置 RNN 記憶體
-        
+
         // 梯度監控相關變數
         double maxGradientNorm = 0.0;
         double avgGradientNorm = 0.0;
@@ -161,7 +171,7 @@ public class SimpleRNN {
                 loss += computeLoss(result.y[t], targets[t]);
             }
 
-            // 平滑系數調大，曲线更穩
+            // 平滑系數調大，曲線更穩
             final double smoothFactor = 0.999;
             final double lossFactor   = 0.001;
 
@@ -170,7 +180,7 @@ public class SimpleRNN {
 
             // 反向傳播
             BackwardResult grad = backward(inputs, targets, result);
-            
+
             // 計算梯度範數並監控梯度爆炸
             double gradientNorm = grad.calculateGradientNorm();
             avgGradientNorm = avgGradientNorm * smoothFactor + gradientNorm * (1 - smoothFactor);
@@ -189,7 +199,7 @@ public class SimpleRNN {
 
             // 在更新參數前進行梯度裁剪
             double afterClipNorm = grad.calculateGradientNorm();
-            
+
             // 如果梯度被裁剪，輸出裁剪前後的梯度範數
             if (Math.abs(gradientNorm  - afterClipNorm) > 1e-6) {
                 //System.out.println("Gradient clipped at iteration " + n +
@@ -198,25 +208,25 @@ public class SimpleRNN {
             }
 
             if (n % 100 == 0) {
-                System.out.println("Iteration: " + n + 
-                                  ", Loss: " + loss + 
-                                  ", Smooth Loss: " + smoothLoss + 
-                                  ", Gradient Norm: " + afterClipNorm + 
+                System.out.println("Iteration: " + n +
+                                  ", Loss: " + loss +
+                                  ", Smooth Loss: " + smoothLoss +
+                                  ", Gradient Norm: " + afterClipNorm +
                                   ", Avg Gradient Norm: " + avgGradientNorm);
             }
 
             // 更新參數
-            updateParameters(grad, n);
+            updateParameters(grad);
 
-            p += SEQ_LENGTH; // move data pointer
+            p += 1; // move data pointer
             n++; // iteration counter
         }
 
         long endTime = System.currentTimeMillis(); // 紀錄結束時間 (毫秒)
         double elapsedTime = (endTime - startTime) / 1000.0; // 轉換為秒
         System.out.println("Training time: " + elapsedTime + " seconds");
-        System.out.println("Gradient statistics - Max Norm: " + maxGradientNorm + 
-                          ", Avg Norm: " + avgGradientNorm + 
+        System.out.println("Gradient statistics - Max Norm: " + maxGradientNorm +
+                          ", Avg Norm: " + avgGradientNorm +
                           ", Explosion Count: " + gradientExplodeCount);
     }
 
@@ -258,7 +268,7 @@ public class SimpleRNN {
              * dhraw 是經過 tanh 激活函数的導數修正後的誤差訊號。
              * 在反向傳播中，隱藏層的誤差 dh 需要乘以 tanh 函数的導數tanh(h)，
              * 以反映激活函数對誤差的影響，從而得到對隱藏層输入的真實梯度 dhraw。
-             * 這個 dhraw 用於計算输入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
+             * 這個 dhraw 用於計算輸入層到隱藏層權重(wxh)、隱藏層到隱藏層權重(whh)和隱藏層偏置(bh)的梯度。
              */
             double[] dhraw = multiply(dh, dtanh(forwardResult.h[t]));
 
@@ -281,6 +291,15 @@ public class SimpleRNN {
             //System.out.printf("t=%d  dhnext norm=%.6f  max=%.6f  min=%.6f%n", t, gradNorm, maxGrad, minGrad);
         }
         return grad;
+    }
+
+    private void updateParameters(BackwardResult grad) {
+        // 更新權重和偏差
+        wxh = subtract(wxh, scale(grad.dwxh, LEARNING_RATE));
+        whh = subtract(whh, scale(grad.dwhh, LEARNING_RATE));
+        why = subtract(why, scale(grad.dwhy, LEARNING_RATE));
+        bh = subtract(bh, scale(grad.dbh, LEARNING_RATE));
+        by = subtract(by, scale(grad.dby, LEARNING_RATE));
     }
 
     private void updateParameters(BackwardResult grad, int n) {
@@ -340,6 +359,42 @@ public class SimpleRNN {
         double[] result = new double[x.length];
         for (int i = 0; i < x.length; i++) {
             result[i] = 1 - x[i] * x[i];
+        }
+        return result;
+    }
+
+    private double[][] scale(double[][] matrix, double factor) {
+        double[][] result = new double[matrix.length][matrix[0].length];
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[0].length; j++) {
+                result[i][j] = matrix[i][j] * factor;
+            }
+        }
+        return result;
+    }
+
+    private double[] scale(double[] vector, double factor) {
+        double[] result = new double[vector.length];
+        for (int i = 0; i < vector.length; i++) {
+            result[i] = vector[i] * factor;
+        }
+        return result;
+    }
+
+    private double[][] subtract(double[][] a, double[][] b) {
+        double[][] result = new double[a.length][a[0].length];
+        for (int i = 0; i < a.length; i++) {
+            for (int j = 0; j < a[0].length; j++) {
+                result[i][j] = a[i][j] - b[i][j];
+            }
+        }
+        return result;
+    }
+
+    private double[] subtract(double[] a, double[] b) {
+        double[] result = new double[a.length];
+        for (int i = 0; i < a.length; i++) {
+            result[i] = a[i] - b[i];
         }
         return result;
     }
@@ -487,18 +542,6 @@ public class SimpleRNN {
         }
     }
 
-    private double[] softmax(double[] x) {
-        double[] result = new double[x.length];
-        double sum = 0.0;
-        for (double value : x) {
-            sum += Math.exp(value);
-        }
-        for (int i = 0; i < x.length; i++) {
-            result[i] = Math.exp(x[i]) / sum;
-        }
-        return result;
-    }
-
     // 使用模型生成長序列
     private void generate(int length, char seedChar) {
         double[] h = new double[HIDDEN_SIZE]; // 初始隱藏狀態
@@ -525,7 +568,7 @@ public class SimpleRNN {
                 System.out.printf("%s : %.4f     ", idxToChar.get(j), probs[j]);
             }
             System.out.println("\n");
-            int nextCharIdx = this.sampleFromProbabilities(probs);
+            int nextCharIdx = argmax(probs);
             if (nextCharIdx < 0 || nextCharIdx >= vocabSize) {
                 System.out.println("Error: Invalid character index generated");
                 return;
@@ -559,6 +602,18 @@ public class SimpleRNN {
         return probabilities.length - 1;
     }
 
+    private double[] softmax(double[] x) {
+        double[] result = new double[x.length];
+        double sum = 0.0;
+        for (double value : x) {
+            sum += Math.exp(value);
+        }
+        for (int i = 0; i < x.length; i++) {
+            result[i] = Math.exp(x[i]) / sum;
+        }
+        return result;
+    }
+
     public static void main(String[] args) throws IOException, ClassNotFoundException {
         SimpleRNN rnn = null;
 
@@ -574,9 +629,10 @@ public class SimpleRNN {
                 data = readDataFromFile(filePath);
             } else {
                 // 使用預設的訓練資料
-                data = "我只有一件事，就是忘記背後努力面前的，向著標竿直跑，要得 神在基督耶穌裏從上面召我來得的獎賞。#";
+                //data = "我只有一件事，就是忘記背後努力面前的，向著標竿直跑，要得 神在基督耶穌裏從上面召我來得的獎賞。#";
+                data = "鮭魚生魚片#";
             }
-            
+
             rnn = new SimpleRNN(data);
             if (args.length >= 3 && args[3].contains("--iter")) {
                 try {
@@ -585,29 +641,39 @@ public class SimpleRNN {
                     System.out.println("Invalid iteration number, using default: " + iterations);
                 }
             }
-            
+
             System.out.println("Training with " + data.length() + " characters, " + iterations + " iterations");
             rnn.train(data, iterations);
-            
+
             // 使用訓練資料的第一個字符作為生成的種子
             char seedChar = data.charAt(0);
             rnn.generate(48, seedChar);
+            rnn.saveModel(String.format("rnn_model_%d.dat", iterations));
+            rnn.train(data, iterations);
+
+            System.out.println("\n--- Generating from '鮭' ---");
+            rnn.generate(4, '鮭'); // Target: 鮭魚生魚片
+
+            System.out.println("\n--- Generating from '生' ---");
+            rnn.generate(3, '生'); // Target: 生魚片
+
             rnn.saveModel(String.format("rnn_model_%d.dat", iterations));
         } else if (args[0].contains("--inference")) {
             String modelPath = "rnn_model_1200.dat";
             if (args.length >= 2) {
                 modelPath = args[1];
             }
-            
-            rnn = new SimpleRNN("");
-            rnn.loadModel(modelPath);
-            
+
+            if (args.length < 3) { // Expect at least --inference <model_path> <seed_char>
+                System.out.println("Usage for inference: java SimpleRNN --inference <model_path> <seed_char> [generate_length]");
+                return;
+            }
+
             char seedChar = '我';
             if (args.length >= 3) {
                 seedChar = args[2].charAt(0);
             }
-            
-            int genLength = 48;
+            int genLength = 48; // Default generation length
             if (args.length >= 4) {
                 try {
                     genLength = Integer.parseInt(args[3]);
@@ -615,7 +681,11 @@ public class SimpleRNN {
                     System.out.println("Invalid generation length, using default: " + genLength);
                 }
             }
-            
+
+            rnn = new SimpleRNN("");
+            System.out.println("Loading model from: " + modelPath);
+            rnn.loadModel(modelPath);
+            System.out.println("Model loaded. Generating sequence from '" + seedChar + "' (length: " + genLength + ")");
             rnn.generate(genLength, seedChar);
         }
     }

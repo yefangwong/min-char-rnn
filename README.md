@@ -16,9 +16,48 @@ This project implements a simple RNN from scratch to learn character sequences a
 
 ## Usage
 
-- Initialize the RNN with training data (a string).
-- Call the `train` method with the number of iterations to train the model.
-- Use the trained model to generate text by sampling from output probabilities.
+This project can be run in two modes: training and inference.
+
+### Prerequisites
+
+- A Java Development Kit (JDK).
+
+First, compile all the Java source files:
+
+```bash
+javac -d out src/*.java
+```
+
+### Training
+
+To train a new model, run the `SimpleRNN` class without any arguments. The training data and number of iterations are currently hardcoded in the `main` method of `src/SimpleRNN.java`.
+
+```bash
+java -cp out SimpleRNN
+```
+
+This will train the model and save the weights to a file (e.g., `rnn_model_2600.dat`) in the project's root directory.
+
+### Inference
+
+To generate text with a pre-trained model, use the `--inference` flag. You need to provide the model file path and a seed character.
+
+**Syntax:**
+```bash
+java -cp out SimpleRNN --inference <model_path> <seed_char> [generate_length]
+```
+
+- `<model_path>`: Path to the `.dat` model file (e.g., `rnn_model_2600.dat`).
+- `<seed_char>`: The starting character for text generation.
+- `[generate_length]` (Optional): The number of characters to generate. Defaults to 20.
+
+**Example:**
+
+To generate a sequence of 10 characters starting with "鮭", ensure `rnn_model_2600.dat` is in the root directory and run:
+
+```bash
+java -cp out SimpleRNN --inference rnn_model_2600.dat 鮭 10
+```
 
 ## Key Components
 
@@ -38,4 +77,4 @@ This project implements a simple RNN from scratch to learn character sequences a
 
 ## License
 
-MIT License
+BSD 3-Clause License (see `src/SimpleRNN.java` for details).
