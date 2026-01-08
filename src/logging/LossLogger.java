@@ -106,7 +106,7 @@ public class LossLogger {
     }
 
     private void writerLoop(String filePath) {
-        try(BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
+        try(BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, false))) {
             while(running || !logQueue.isEmpty()) {
                 String line = logQueue.poll();
                 if (line != null) {

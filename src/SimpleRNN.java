@@ -141,8 +141,11 @@ public class SimpleRNN {
                 100
         );
 
+        int earlyStopCounter = 0;
+        final double earlyStopThreshold = 0.9;
+        final int earlyStopPatience = 500;
+
         System.out.println("initial smoothLoss:" + smoothLoss);
-        logger.log(n, 0, smoothLoss);
         while(n <= iterations) {
             //System.out.println("iter:" + n + " starts --------------------------------");
             if ((p + SEQ_LENGTH >= data.length() || n == 0)) {
@@ -186,6 +189,18 @@ public class SimpleRNN {
 
             // 更新 smoothLoss
             smoothLoss = smoothLoss * smoothFactor + loss * lossFactor;
+
+            // Early stopping check
+            if (smoothLoss < earlyStopThreshold) {
+                earlyStopCounter++;
+            } else {
+                earlyStopCounter = 0;
+            }
+
+            if (earlyStopCounter >= earlyStopPatience) {
+                System.out.println("Early stopping at iteration " + n + " because smooth_loss < " + earlyStopThreshold + " for " + earlyStopPatience + " steps.");
+                break;
+            }
 
             // 反向傳播
             BackwardResult grad = backward(inputs, targets, result);
