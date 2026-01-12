@@ -30,6 +30,7 @@
  * BSD license.
  */
 
+import logging.HiddenStateLogger;
 import logging.LossLogger;
 
 import java.io.*;
@@ -40,8 +41,8 @@ import java.util.Random;
 
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
-    private static final int SEQ_LENGTH = 25; // 序列長度
-    private static int iterations = 20800; // 訓練次數
+    private static final int SEQ_LENGTH = 4; // 序列長度
+    private static int iterations = 100000; // 訓練次數
     private static final double LEARNING_RATE = 0.001; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
@@ -103,23 +104,20 @@ public class SimpleRNN {
 
     private double[][] randomMatrix(int rows, int cols) {
         Random rand = new Random();
-        double[][] matrix = new double[rows][cols];
+        /*double[][] matrix = new double[rows][cols];
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 matrix[i][j] = rand.nextGaussian() * 0.01;
             }
         }
-        return matrix;
-        /*
-                // 改用 Xavier 初始化 (適用於 tanh)
+        return matrix;*/
+        // 改用 Xavier 初始化 (適用於 tanh)
         double scale = Math.sqrt(6.0 / (rows + cols));
         return Arrays.stream(new double[rows][cols])
                 .map(row -> Arrays.stream(row)
                         .map(v -> rand.nextGaussian() * scale)
                         .toArray())
                 .toArray(double[][]::new);
-
-         */
     }
 
     private void train(String data, int iterations) {
@@ -140,15 +138,20 @@ public class SimpleRNN {
                 LossLogger.LogLevel.AUDIT,
                 100
         );
+        // 初始化 HiddenStateLogger
+        HiddenStateLogger hsLogger = new HiddenStateLogger(
+                "hidden_states.csv",
+                HIDDEN_SIZE);
 
         int earlyStopCounter = 0;
-        final double earlyStopThreshold = 0.9;
+        final double earlyStopThreshold = 0.01;
         final int earlyStopPatience = 500;
 
         System.out.println("initial smoothLoss:" + smoothLoss);
         while(n <= iterations) {
             //System.out.println("iter:" + n + " starts --------------------------------");
-            if ((p + SEQ_LENGTH >= data.length() || n == 0)) {
+            // 檢查指針是否已滑到數據末尾，無法再取出一個完整序列。
+            if ((p + SEQ_LENGTH > data.length() || n == 0)) {
                 hPrev = new double[HIDDEN_SIZE]; // reset RNN memory
                 p = 0; // go from start of data
             }
@@ -170,11 +173,24 @@ public class SimpleRNN {
             double loss = 0;
 
             // for debug
-            //System.out.println("inputs:" + Arrays.toString(inputs));
-            //System.out.println("targets:" + Arrays.toString(targets));
+            //if (n % 100 == 0) {
+                System.out.println("inputs:" + Arrays.toString(inputs));
+                System.out.println("targets:" + Arrays.toString(targets));
+            //}
 
             // 前向傳播 (得到預測機率)
             ForwardResult result = forward(inputs, hPrev);
+
+            // 記錄隱藏狀態 (只在特定迭代記錄，避免檔案過大)
+            if (n % 1000 == 0) { // 例如每 1000 次迭代記錄一次
+                for (int t = 0; t < SEQ_LENGTH; t++) {
+                    if (inputs[t] == 1) { // 確保 token 只輸出「魚」
+                        char token = idxToChar.get(inputs[t]);
+                        hsLogger.log(n, t, token, result.h[t]);
+                    }
+                }
+            }
+
             // 取這一輪的最後一個時間步做為下一輪的初始 hPrev
             hPrev = result.h[result.h.length - 1];
 
@@ -247,7 +263,9 @@ public class SimpleRNN {
             logger.log(n, loss, smoothLoss);
         }
 
+        // 關閉兩個 logger
         logger.close();
+        hsLogger.close();
 
         long endTime = System.currentTimeMillis(); // 紀錄結束時間 (毫秒)
         double elapsedTime = (endTime - startTime) / 1000.0; // 轉換為秒
@@ -312,10 +330,13 @@ public class SimpleRNN {
             dhnext = clipGradient(dhnext, 1.0); // 限制單個神經元梯度
 
             // 添加梯度監控 (新增以下三行)
-            double gradNorm = Math.sqrt(Arrays.stream(dhnext).map(x -> x*x).sum());
+            double gradNorm = Math.sqrt(Arrays.stream(dhnext).map(x -> x * x).sum());
             double maxGrad = Arrays.stream(dhnext).max().orElse(0);
             double minGrad = Arrays.stream(dhnext).min().orElse(0);
-            //System.out.printf("t=%d  dhnext norm=%.6f  max=%.6f  min=%.6f%n", t, gradNorm, maxGrad, minGrad);
+
+            if (gradNorm < 1e-6) {
+                System.out.printf("t=%d  dhnext norm=%.6f  max=%.6f  min=%.6f%n", t, gradNorm, maxGrad, minGrad);
+            }
         }
         return grad;
     }
@@ -658,6 +679,7 @@ public class SimpleRNN {
                 // 使用預設的訓練資料
                 //data = "我只有一件事，就是忘記背後努力面前的，向著標竿直跑，要得 神在基督耶穌裏從上面召我來得的獎賞。#";
                 data = "鮭魚生魚片#";
+                //data = "AUTOPUBACCFLAG#AUTO#PUB#ACC#FLAG#";
             }
 
             rnn = new SimpleRNN(data);
