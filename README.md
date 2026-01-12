@@ -36,7 +36,7 @@ To train a new model, run the `SimpleRNN` class without any arguments. The train
 java -cp out SimpleRNN
 ```
 
-This will train the model and save the weights to a file (e.g., `rnn_model_2600.dat`) in the project's root directory.
+This will train the model and save the weights to a file (e.g., `rnn_model_12000.dat`) in the project's root directory.
 
 ### Inference
 
@@ -53,7 +53,7 @@ java -cp out SimpleRNN --inference <model_path> <seed_char> [generate_length]
 
 **Example:**
 
-To generate a sequence of 10 characters starting with "鮭", ensure `rnn_model_2600.dat` is in the root directory and run:
+To generate a sequence of 10 characters starting with "鮭", ensure `rnn_model_12000.dat` is in the root directory and run:
 
 ```bash
 java -cp out SimpleRNN --inference rnn_model_12000.dat 鮭 4
@@ -68,8 +68,7 @@ java -cp out SimpleRNN --inference rnn_model_12000.dat 鮭 4
 - Parameter updates use gradient descent with a fixed learning rate.
 
 ## Notes
-*  ~~Sequence length is fixed to 1 for simplicity.~~ 
-*  **Sequence length (SEQ_LENGTH) is now set to 25, aligning with the original Python implementation to facilitate the learning of intermediate temporal dependencies.** 
+*  Sequence length is fixed to 4 for simplicity.
 *  The recurrent logic in the `forward` pass has been corrected to ensure proper propagation of the hidden state across time steps.
 - The model uses one-hot encoding for input characters.
 - Random initialization of weights with small Gaussian noise.
