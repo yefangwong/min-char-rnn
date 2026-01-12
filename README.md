@@ -47,16 +47,16 @@ To generate text with a pre-trained model, use the `--inference` flag. You need 
 java -cp out SimpleRNN --inference <model_path> <seed_char> [generate_length]
 ```
 
-- `<model_path>`: Path to the `.dat` model file (e.g., `rnn_model_2600.dat`).
+- `<model_path>`: Path to the `.dat` model file (e.g., `rnn_model_12000.dat`).
 - `<seed_char>`: The starting character for text generation.
-- `[generate_length]` (Optional): The number of characters to generate. Defaults to 20.
+- `[generate_length]` (Optional): The number of characters to generate. Defaults to 4.
 
 **Example:**
 
 To generate a sequence of 10 characters starting with "鮭", ensure `rnn_model_2600.dat` is in the root directory and run:
 
 ```bash
-java -cp out SimpleRNN --inference rnn_model_2600.dat 鮭 10
+java -cp out SimpleRNN --inference rnn_model_12000.dat 鮭 4
 ```
 
 ## Key Components
