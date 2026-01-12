@@ -104,13 +104,6 @@ public class SimpleRNN {
 
     private double[][] randomMatrix(int rows, int cols) {
         Random rand = new Random();
-        /*double[][] matrix = new double[rows][cols];
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < cols; j++) {
-                matrix[i][j] = rand.nextGaussian() * 0.01;
-            }
-        }
-        return matrix;*/
         // 改用 Xavier 初始化 (適用於 tanh)
         double scale = Math.sqrt(6.0 / (rows + cols));
         return Arrays.stream(new double[rows][cols])
@@ -174,8 +167,8 @@ public class SimpleRNN {
 
             // for debug
             if (n % 100 == 0) {
-                System.out.println("inputs:" + Arrays.toString(inputs));
-                System.out.println("targets:" + Arrays.toString(targets));
+                //System.out.println("inputs:" + Arrays.toString(inputs));
+                //System.out.println("targets:" + Arrays.toString(targets));
             }
 
             // 前向傳播 (得到預測機率)
@@ -348,49 +341,6 @@ public class SimpleRNN {
         why = subtract(why, scale(grad.dwhy, LEARNING_RATE));
         bh = subtract(bh, scale(grad.dbh, LEARNING_RATE));
         by = subtract(by, scale(grad.dby, LEARNING_RATE));
-    }
-
-    private void updateParameters(BackwardResult grad, int n) {
-        double process = n / (double) iterations;
-        double dynamicLR = LEARNING_RATE * (1.0 - process); // 線性衰減
-
-        // 使用 Adagrad 優化器更新權重和偏差
-
-        // 更新 wxh 及其記憶變數
-        for (int i = 0; i < wxh.length; i++) {
-            for (int j = 0; j < wxh[0].length; j++) {
-                mWxh[i][j] += grad.dwxh[i][j] * grad.dwxh[i][j];
-                wxh[i][j] -= dynamicLR * grad.dwxh[i][j] / Math.sqrt(mWxh[i][j] + EPSILON);
-            }
-        }
-
-        // 更新 whh 及其記憶變數
-        for (int i = 0; i < whh.length; i++) {
-            for (int j = 0; j < whh[0].length; j++) {
-                mWhh[i][j] += grad.dwhh[i][j] * grad.dwhh[i][j];
-                whh[i][j] -= dynamicLR * grad.dwhh[i][j] / Math.sqrt(mWhh[i][j] + EPSILON);
-            }
-        }
-
-        // 更新 why 及其記憶變數
-        for (int i = 0; i < why.length; i++) {
-            for (int j = 0; j < why[0].length; j++) {
-                mWhy[i][j] += grad.dwhy[i][j] * grad.dwhy[i][j];
-                why[i][j] -= dynamicLR * grad.dwhy[i][j] / Math.sqrt(mWhy[i][j] + EPSILON);
-            }
-        }
-
-        // 更新 bh 及其記憶變數
-        for (int i = 0; i < bh.length; i++) {
-            mBh[i] += grad.dbh[i] * grad.dbh[i];
-            bh[i] -= dynamicLR * grad.dbh[i] / Math.sqrt(mBh[i] + EPSILON);
-        }
-
-        // 更新 by 及其記憶變數
-        for (int i = 0; i < by.length; i++) {
-            mBy[i] += grad.dby[i] * grad.dby[i];
-            by[i] -= dynamicLR * grad.dby[i] / Math.sqrt(mBy[i] + EPSILON);
-        }
     }
 
     private double[][] outer(double[] a, double[] b) {
