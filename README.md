@@ -71,7 +71,7 @@ java -cp out SimpleRNN --inference rnn_model_12000.dat 鮭 4
 *  Sequence length is fixed to 4 for simplicity.
 *  The recurrent logic in the `forward` pass has been corrected to ensure proper propagation of the hidden state across time steps.
 - The model uses one-hot encoding for input characters.
-- Random initialization of weights with small Gaussian noise.
+- Weight Initialization: Switched from random Gaussian noise to Xavier initialization (Glorot initialization) to optimize gradient flow for the Tanh activation function.
 - Designed for educational purposes to understand RNN internals.
 
 ## License
