@@ -42,8 +42,8 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 4; // 序列長度
-    private static int iterations = 100000; // 訓練次數
-    private static final double LEARNING_RATE = 0.001; // 學習率
+    private static int iterations = 12000; // 訓練次數
+    private static final double LEARNING_RATE = 0.0005; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
@@ -173,10 +173,10 @@ public class SimpleRNN {
             double loss = 0;
 
             // for debug
-            //if (n % 100 == 0) {
+            if (n % 100 == 0) {
                 System.out.println("inputs:" + Arrays.toString(inputs));
                 System.out.println("targets:" + Arrays.toString(targets));
-            //}
+            }
 
             // 前向傳播 (得到預測機率)
             ForwardResult result = forward(inputs, hPrev);
