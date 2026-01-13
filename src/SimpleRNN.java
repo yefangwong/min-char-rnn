@@ -41,10 +41,15 @@ import java.util.Random;
 
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
-    private static final int SEQ_LENGTH = 5; // 序列長度
     private static final boolean DEBUG = false;
-    private static int iterations = 82000; // 訓練次數
     private static final double LEARNING_RATE = 0.00004; // 學習率
+
+    // 實驗設定切換
+    private static boolean isSuccessMode = true;
+    // 基礎參數會根據模式調整
+    private static int SEQ_LENGTH = isSuccessMode ? 5 : 4;
+    private static int iterations = isSuccessMode ? 82000 : 64000;
+    boolean useIdentityInit = false;
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
@@ -90,8 +95,11 @@ public class SimpleRNN {
 
         // 初始化權重
         wxh = randomMatrix(HIDDEN_SIZE, vocabSize);   // 輸入層到隱藏層權重
-        //whh = randomMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
-        whh = identityMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
+        if (useIdentityInit) {
+            whh = identityMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
+        } else {
+            whh = randomMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
+        }
         why = randomMatrix(vocabSize, HIDDEN_SIZE);   // 隱藏層到輸出層權重
         bh = new double[HIDDEN_SIZE];                 // 隱藏層 bias
         by = new double[vocabSize];                   // 輸出層 bias
