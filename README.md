@@ -74,13 +74,7 @@ java -cp out SimpleRNN --inference rnn_model_20000.dat 鮭 4
 - Weight Initialization: Switched from random Gaussian noise to **Xavier initialization** (Glorot initialization) to optimize gradient flow for the Tanh activation function.
 - Designed for educational purposes to understand RNN internals.
 
-Based on your breakthrough experimental results and the theoretical foundations provided in the sources, here is a professional **English README** section tailored for your `SimpleRNN.java` project.
-
-This content highlights the technical leap from **Random Gaussian** to **Identity Initialization (IRNN)** and draws on the concepts of **Dynamical Isometry** discussed in the sources.
-
----
-
-# Performance Breakthrough: 4x Faster Convergence via Identity Initialization (IRNN)
+## Performance Breakthrough: 4x Faster Convergence via Identity Initialization (IRNN)
 
 This project implements a **Minimal Character-level RNN** in Java. Recent experimental results demonstrate a **4.1x improvement in convergence speed** by transitioning from standard random initialization to the **Identity-RNN (IRNN) strategy**.
 
