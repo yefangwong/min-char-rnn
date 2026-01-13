@@ -171,15 +171,9 @@ public class SimpleRNN {
             double loss = 0;
 
             // for debug
-<<<<<<< HEAD
-            if (n % 100 == 0) {
-                //System.out.println("inputs:" + Arrays.toString(inputs));
-                //System.out.println("targets:" + Arrays.toString(targets));
-=======
             if (DEBUG && (n % 100 == 0)) {
                 System.out.println("inputs:" + Arrays.toString(inputs));
                 System.out.println("targets:" + Arrays.toString(targets));
->>>>>>> develop
             }
 
             // 前向傳播 (得到預測機率)
