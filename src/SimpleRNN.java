@@ -41,9 +41,9 @@ import java.util.Random;
 
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
-    private static final int SEQ_LENGTH = 4; // 序列長度
+    private static final int SEQ_LENGTH = 5; // 序列長度
     private static final boolean DEBUG = false;
-    private static int iterations = 64000; // 訓練次數
+    private static int iterations = 82000; // 訓練次數
     private static final double LEARNING_RATE = 0.00004; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
@@ -90,7 +90,8 @@ public class SimpleRNN {
 
         // 初始化權重
         wxh = randomMatrix(HIDDEN_SIZE, vocabSize);   // 輸入層到隱藏層權重
-        whh = randomMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
+        //whh = randomMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
+        whh = identityMatrix(HIDDEN_SIZE, HIDDEN_SIZE); // 隱藏層到隱藏層權重
         why = randomMatrix(vocabSize, HIDDEN_SIZE);   // 隱藏層到輸出層權重
         bh = new double[HIDDEN_SIZE];                 // 隱藏層 bias
         by = new double[vocabSize];                   // 輸出層 bias
@@ -101,6 +102,23 @@ public class SimpleRNN {
         mWhy = new double[vocabSize][HIDDEN_SIZE];
         mBh = new double[HIDDEN_SIZE];
         mBy = new double[vocabSize];
+    }
+
+    private double[][] identityMatrix(int rows, int cols) {
+        double[][] identityMatrix = new double[rows][cols];
+        double scale = 0.9; // <--- 加入這個縮放因子，幫助抑制梯度爆炸
+
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < cols; j++) {
+                // Main diagonal elements
+                if (i == j) {
+                    identityMatrix[i][j] = scale;
+                } else { // Off-diagonal elements
+                    identityMatrix[i][j] = 0;
+                }
+            }
+        }
+        return identityMatrix;
     }
 
     private double[][] randomMatrix(int rows, int cols) {
@@ -178,7 +196,7 @@ public class SimpleRNN {
             double loss = 0;
 
             // for debug
-            if (DEBUG && (n % 100 == 0)) {
+            if (DEBUG /*&& (n % 100 == 0)*/) {
                 System.out.println("inputs:" + Arrays.toString(inputs));
                 System.out.println("targets:" + Arrays.toString(targets));
             }
