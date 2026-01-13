@@ -56,7 +56,7 @@ java -cp out SimpleRNN --inference <model_path> <seed_char> [generate_length]
 To generate sequences such as "鮭魚生魚片" (5 characters starting with "鮭"), or "生魚片" (3 characters starting with "生"), ensure `rnn_model_82000.dat` is in the root directory and run:
 
 ```bash
-java -cp out SimpleRNN --inference rnn_model_64000.dat 鮭 4
+java -cp out SimpleRNN --inference rnn_model_82000.dat 鮭 4
 ```
 
 ## Key Components
