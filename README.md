@@ -78,10 +78,15 @@ java -cp out SimpleRNN --inference rnn_model_20000.dat 鮭 4
 
 This project implements a **Minimal Character-level RNN** in Java. Recent experimental results demonstrate a **4.1x improvement in convergence speed** by transitioning from standard random initialization to the **Identity-RNN (IRNN) strategy**.
 
-### 1. The Core Engineering Challenge: Semantic Collapse
-In a character-level RNN, capturing long-distance dependencies (e.g., predicting "片" in "鮭魚生魚片") is difficult due to the **Vanishing Gradient Problem**. When using standard `Tanh` activation and random Gaussian weights, gradients decay exponentially as they backpropagate through time (BPTT), with the median gradient norm dropping to as low as **$1.37 \times 10^{-9}$**. 
+### 1. The Core Engineering Challenge: Gradient Attenuation
+In a character-level RNN, resolving the semantic ambiguity of repeated characters (like "魚" in different positions) is primarily an optimization challenge.
+With a SEQ_LENGTH of 4, the model is theoretically capable of bridging the dependencies. However, it suffers from severe gradient attenuation. The signal required to disambiguate the transition from "魚" to "片" is extremely faint, forcing the model to undergo an extensive training period of 82,000 iterations to fine-tune the weights through this "narrow" temporal window.
+2. The Optimization: Enhancing Signal Strength
+To improve training efficiency, we optimized two key dimensions:
+• Temporal Receptive Field (SEQ_LENGTH = 5): Increasing the sequence length to 5 does not just provide "more" data; it significantly strengthens the gradient signal. By capturing one additional preceding character, the "bridge" between the initial context (e.g., "鮭") and the target prediction ("片") becomes much more accessible to the optimizer.
+• Structural Stability (Identity Init): Initializing W_{hh} as an Identity Matrix provides a stable baseline for state transitions, preventing the semantic vector of "魚" from being distorted by random initialization noise.
+Conclusion: The transition from 82,000 to 20,000 iterations (a 4x speedup) demonstrates that while a minimal context (length 4) can eventually resolve ambiguity, a slightly wider receptive field (length 5) coupled with structural initialization makes that information vastly more "learnable" for the network.
 
-This resulted in the model failing to distinguish between "鮭魚" (salmon) and "生魚片" (sashimi), often collapsing into a repetitive "生魚生" loop.
 
 ### 2. The Solution: Achieving Dynamical Isometry
 By setting the recurrent weight matrix ($W_{hh}$) to an **Identity Matrix ($I$)** and refining the window striding to $p += 1$, we achieved what researchers call **Dynamical Isometry**:
