@@ -36,7 +36,7 @@ To train a new model, run the `SimpleRNN` class without any arguments. The train
 java -cp out SimpleRNN
 ```
 
-This will train the model and save the weights to a file (e.g., `rnn_model_82000.dat`) in the project's root directory.
+This will train the model and save the weights to a file (e.g., `rnn_model_20000.dat`) in the project's root directory.
 
 ### Inference
 
@@ -47,16 +47,16 @@ To generate text with a pre-trained model, use the `--inference` flag. You need 
 java -cp out SimpleRNN --inference <model_path> <seed_char> [generate_length]
 ```
 
-- `<model_path>`: Path to the `.dat` model file (e.g., `rnn_model_82000.dat`).
+- `<model_path>`: Path to the `.dat` model file (e.g., `rnn_model_20000.dat`).
 - `<seed_char>`: The starting character for text generation.
 - `[generate_length]` (Optional): The number of characters to generate. Defaults to 4.
 
 **Example:**
 
-To generate sequences such as "鮭魚生魚片" (5 characters starting with "鮭"), or "生魚片" (3 characters starting with "生"), ensure `rnn_model_82000.dat` is in the root directory and run:
+To generate sequences such as "鮭魚生魚片" (5 characters starting with "鮭"), or "生魚片" (3 characters starting with "生"), ensure `rnn_model_20000.dat` is in the root directory and run:
 
 ```bash
-java -cp out SimpleRNN --inference rnn_model_82000.dat 鮭 4
+java -cp out SimpleRNN --inference rnn_model_20000.dat 鮭 4
 ```
 
 ## Key Components
