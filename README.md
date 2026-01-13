@@ -68,7 +68,7 @@ java -cp out SimpleRNN --inference rnn_model_20000.dat 鮭 4
 - Parameter updates use gradient descent with a fixed learning rate.
 
 ## Notes
-*  Sequence length is fixed to 4 for simplicity.
+*  Through experimental validation, the SEQ_LENGTH is set to 5. While 4 was initially used for simplicity, it proved insufficient to resolve the semantic ambiguity of the character "魚". Increasing the length to 5 provides the necessary context for the model to distinguish between "Salmon" (鮭魚) and the final "Sashimi" (生魚片) stage, ensuring stable convergence.
 *  The recurrent logic in the `forward` pass has been corrected to ensure proper propagation of the hidden state across time steps.
 - The model uses one-hot encoding for input characters.
 - Weight Initialization: Switched from random Gaussian noise to **Xavier initialization** (Glorot initialization) to optimize gradient flow for the Tanh activation function.
