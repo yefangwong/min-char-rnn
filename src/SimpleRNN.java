@@ -42,8 +42,9 @@ import java.util.Random;
 public class SimpleRNN {
     private static final int HIDDEN_SIZE = 100; // 隱藏層大小
     private static final int SEQ_LENGTH = 4; // 序列長度
-    private static int iterations = 12000; // 訓練次數
-    private static final double LEARNING_RATE = 0.0005; // 學習率
+    private static final boolean DEBUG = false;
+    private static int iterations = 64000; // 訓練次數
+    private static final double LEARNING_RATE = 0.00004; // 學習率
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
@@ -154,21 +155,31 @@ public class SimpleRNN {
             for (int i = 0; i < SEQ_LENGTH; i++) {
                 // 檢查目標字符的索引 (p + i + 1) 是否超出總資料長度
                 // 如果下一個字符 (p + i + 1) 不存在，則代表資料切片結束，必須跳出
-                if (p + i + 1 >= data.length()) {
+                if (p + i + 1 > data.length()) {
                     break;
                 }
 
                 // 讀取當前輸入字符（p + i）
                 inputs[i] = charToIdx.get(data.charAt(p + i));
                 // 讀取下一個目標字符（p + i + 1）
-                targets[i] = charToIdx.get(data.charAt(p + i + 1));
+                // 當 input 字符不是結尾字元
+                if (p + i + 1 < data.length())
+                    targets[i] = charToIdx.get(data.charAt(p + i + 1));
+                else // 當 input 字符是結尾字元
+                    targets[i] = charToIdx.get(data.charAt(p + i));// 令其為結尾字元，避免 java.lang.StringIndexOutOfBoundsException
             }
             double loss = 0;
 
             // for debug
+<<<<<<< HEAD
             if (n % 100 == 0) {
                 //System.out.println("inputs:" + Arrays.toString(inputs));
                 //System.out.println("targets:" + Arrays.toString(targets));
+=======
+            if (DEBUG && (n % 100 == 0)) {
+                System.out.println("inputs:" + Arrays.toString(inputs));
+                System.out.println("targets:" + Arrays.toString(targets));
+>>>>>>> develop
             }
 
             // 前向傳播 (得到預測機率)
