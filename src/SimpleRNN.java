@@ -48,8 +48,8 @@ public class SimpleRNN {
     private static boolean isSuccessMode = true;
     // 基礎參數會根據模式調整
     private static int SEQ_LENGTH = isSuccessMode ? 5 : 4;
-    private static int iterations = isSuccessMode ? 82000 : 64000;
-    boolean useIdentityInit = false;
+    private static int iterations = isSuccessMode ? 20000 : 64000;
+    boolean useIdentityInit = true;
 
     private double[][] wxh; // 輸入層到隱藏層的權重矩陣
     private double[][] whh; // 隱藏層到隱藏層的權重矩陣
