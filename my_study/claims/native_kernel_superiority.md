@@ -1,0 +1,1 @@
+- [Kernel] 原生 BLAS 庫 (OpenBLAS/MKL) 的向量化效能遠超 HotSpot JIT 的自動向量化。

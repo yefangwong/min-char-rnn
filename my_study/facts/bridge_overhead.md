@@ -1,0 +1,2 @@
+- JNI 調用存在上下文切換開銷。
+- Project Panama 支援零拷貝訪問 Off-heap 記憶體。

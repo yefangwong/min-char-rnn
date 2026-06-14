@@ -1,0 +1,3 @@
+- [Layout] 維持 `4 * HIDDEN_SIZE` 的雙層陣列結構比徹底攤平更具價值。
+- [Reason] 雙層結構提供 JIT 更大的 **Loop Unrolling (迴圈展開)** 優化窗口，且具備更高的代碼可讀性。
+- [Future] 此佈局為未來遷移至 Java **Vector API (SIMD)** 預留了連續存取的邏輯邊界。
